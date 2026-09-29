@@ -85,7 +85,7 @@ export OSUI_REQUIRE_GATEWAY=true
 uv run python -m openshell_ui
 ```
 
-**`OSUI_REQUIRE_GATEWAY=true` は常用してください。** 既定の `false` だと、gateway 側の障害が「demo に落ちた無関係な一覧」として見え、失敗が静かに Cher まります。`true` にすると接続できないまま起動が失敗し、原因がそのまま分かります。
+**`OSUI_REQUIRE_GATEWAY=true` は常用してください。** 既定の `false` だと、gateway 側の障害が「demo に落ちた無関係な一覧」として見え、失敗が静かに閉じます。`true` にすると接続できないまま起動が失敗し、原因がそのまま分かります。
 
 ### 3.3 mTLS / OIDC を組み合わせる
 
@@ -113,6 +113,51 @@ export OSUI_OIDC_AUDIENCE=...
 
 ```bash
 openshell forward start 8000 my-sandbox
+```
+
+### 3.5 macOS + OrbStack の場合
+
+macOS では OrbStack を Docker ランタイムに使うと手順が最も短くなります。詳細は [README.md の「macOS + OrbStack での環境構築」](README.md#macos--orbstack-での環境構築) を参照してください。要点だけ挙げます。
+
+```bash
+brew install orbstack
+orb start
+docker context use orbstack
+docker info
+docker version --format 'server: {{.Server.Version}}'   # 28.0 以上であること
+```
+
+**最も失敗しやすいのは socket です。** OpenShell の Docker driver は `socket_path` 未指定時に `/var/run/docker.sock` を優先しますが、OrbStack がこの symlink を作るのは管理者権限が使える場合だけです。無い場合は `/var/run/docker.sock` を探しにいって失敗します。
+
+```bash
+ls -l /var/run/docker.sock 2>/dev/null || echo '未作成'
+```
+
+`未作成` なら `~/.config/openshell/gateway.toml` に OrbStack のソケットを明示します（TOML は `~` を展開しないため絶対パスで書きます）。
+
+```toml
+[openshell]
+version = 2
+
+[openshell.gateway]
+compute_driver = "docker"
+
+[openshell.drivers.docker]
+socket_path = "/Users/あなたのユーザー名/.orbstack/run/docker.sock"
+```
+
+編集後は再起動の前に検証します。
+
+```bash
+openshell-gateway config preflight --path ~/.config/openshell/gateway.toml
+```
+
+その後は §3.2 と同じです。
+
+```bash
+export OSUI_GATEWAY_ENDPOINT=127.0.0.1:17670
+export OSUI_REQUIRE_GATEWAY=true
+./scripts/run-local.sh
 ```
 
 ## 4. 認証と公開の安全性
@@ -268,7 +313,7 @@ curl -fsS -X DELETE "$BASE/api/sandboxes/ci-box" \
 
 UI から操作できるのは作成と実行だけです。sandbox の中で実際の agent を動かす場合は、`policy` と `provider profile` の準備が別途必要です。次の順で整備します。
 
-1. `deploy/` 配下の `policy/ui-policy.yaml` を参考に、网络規則を記述する
+1. `deploy/` 配下の `policy/ui-policy.yaml` を参考に、ネットワーク規則を記述する
 2. `openshell profile import --url <URL>` で provider profile を投入する
 3. agent が出そうになる接続は、承認の前に `openshell rule get` で一覧する
 4. `openshell rule approve` / `openshell rule reject` で判断する
@@ -301,7 +346,7 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 
 - 作成直後は `provisioning`、0.8 秒後に `ready` になります
 - 応答するのは次のコマンドだけです: `ls` / `dir` / `pwd` / `whoami` / `hostname` / `uname` / `python` / `python3` / `node` / `uv` / `echo`
-- それ以外は `demo: executed '<コマンド>' without a real sandbox` を返すだけです。**終了コードは常に 0** なので、失敗したコマンドを察觉できません
+- それ以外は `demo: executed '<コマンド>' without a real sandbox` を返すだけです。**終了コードは常に 0** なので、失敗したコマンドを察知できません
 - sandbox の内容・ファイル・ネットワークは実在しません
 
 用途は「UI が壊れていないかの確認」「デモ」「Colab や Vercel での見た目確認」までです。**demo backend で成功したコマンドを、実 gateway で成功した証拠として扱わないでください。** 接続できたかどうかは `/api/health` の `backend` フィールドで必ず確認します。
@@ -321,6 +366,10 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 | `the openshell SDK is not installed` | OpenShell 別の依存が未導入 | `uv sync --extra openshell` |
 | Colab で `pip install failed` | リポジトリが public かつ push 済みでない | 公開して push してから再実行 |
 | Docker に接続できない | Docker や OrbStack の daemon が停止 | コンテナ環境を起動してからやり直す |
+| OrbStack で sandbox 作成が失敗 | `/var/run/docker.sock` が無い | §3.5 のとおり `socket_path` を TOML に書く |
+| `docker context ls` に `orbstack` が無い | CLI を単体で導入した | `brew reinstall orbstack` して context を作り直す |
+| `server: 27.x` と表示される | Docker Engine が 28.0 未満 | OrbStack を最新版へ更新する |
+| private registry への push が失敗 | OrbStack は `osxkeychain` を使う | `docker login` をやり直す |
 | 名前を作れない（409） | 同名・同 workspace で既存 | 削除するか、名前を分ける |
 | Quick Tunnel が 200 を超える | 同時接続数の上限 | named tunnel を使う |
 
@@ -330,10 +379,10 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 
 - **`OSUI_AUTH_TOKEN` を設定せずに `0.0.0.0` へ bind する** — 起動は拒否されますが、`--host` の直接指定などで回避されないよう、意図を確認してください
 - **トークンを URL に埋め込んだまま共有する** — `?token=` は各省のアクセスログや履歴に残ります。SSE 以外の用途では `Authorization` を使ってください
-- **Vercel から手元の gateway に届く Simulac と期待する** — 到達できません。Vercel は demo の確認用です
+- **Vercel から手元の gateway に届くことと期待する** — 到達できません。Vercel は demo の確認用です
 - **Colab で公開トンネルを張る** — Colab の利用規約に抵触します。ノートブック内の該当セルはコメントアウトされています
 - **demo backend の成功を実 gateway の成功として扱う** — 擬似応答です
-**exec に `env` を渡して設定を期待する** — 未実装で 422 になります。環境変数はイメージや entrypoint で仕込んでください。
+- **`exec` に `env` を渡して設定を期待する** — 未実装で 422 になります。環境変数はイメージや entrypoint で仕込んでください。
 - **UI のコンソールでパイプやリダイレクトを使う** — 効きません。REST API の `command` 配列で `bash -lc` を挟んでください
 - **policy を理由なく緩める** — 緩めた量为そのまま攻撃面です。`read_only` に追加するより `read_write` を増やす方が影響範囲が広いです
 
@@ -353,7 +402,7 @@ uv run pyright                # 0 errors
 |---|---|
 | `uv run pytest` | 149 passed |
 | `uv run ruff check .` | All checks passed |
-| `uv run ruff format --check .` | 30 files already formatted |
+| `uv run ruff format --check .` | 31 files already formatted |
 | `uv run pyright` | 0 errors |
 
 テストは demo backend を使い、gateway には接続しません。`OSUI_DEMO=true` 相当の設定は `tests/helpers.py` の `make_settings()` が保証しています。
@@ -366,9 +415,10 @@ uv run pyright                # 0 errors
 | 構想、機能一覧、全環境変数 | [`README.md`](README.md) |
 | 英語版 | [`README_en.md`](README_en.md) |
 | 設計判断と検証の記録 | [`DEV-MEMO.md`](DEV-MEMO.md) |
-| 出発点の UI/UX ガイド（拟似 API） | `openshell-uiux-guide.html` |
+| 出発点の UI/UX ガイド（擬似 API） | `openshell-uiux-guide.html` |
 | OpenShell 公式ドキュメント | <https://docs.nvidia.com/openshell/latest/> |
 | OpenShell 本体 | <https://github.com/NVIDIA/OpenShell> |
+| OrbStack 公式ドキュメント | <https://docs.orbstack.dev/> |
 
 ## 12. 今後の用例・アイデア
 
@@ -376,7 +426,7 @@ uv run pyright                # 0 errors
 
 ### 12.1 追記の目安
 
-追記が expedient なケースです。
+追記が実際に価値になったケースです。
 
 - 特定の目的（GPU 検証、脆弱性再現、複数テナント運用、CI での回帰など）で実際に使った手順
 - UI の制約を回避する実用的なパターン（`bash -lc` への置き換え、値の渡し方など）
@@ -398,16 +448,16 @@ uv run pyright                # 0 errors
 
 1. ...
 
-**碰到了こと / 制約** — 実際に詰まった点。制約であれば UI 側の制限か API 側の回避策か
+**実際に詰まったこと / 制約** — 実際に詰まった点。制約であれば UI 側の制限か API 側の回避策か
 
 **検証** — どう確かめたか（コマンド・確認先）
 ```
 
 ### 12.3 記録済みの用例
 
-まだ条目はありません。以下は候補として Truth です。
+まだ記録はありません。以下は候補として挙げたものです。
 
-- [ ] GPU fermware の検証を Colab + API exec で行う
+- [ ] GPU ファームウェアの検証を Colab + API exec で行う
 - [ ] Quick Tunnel と named tunnel の使い分けの基準
 - [ ] 複数 workspace を組み合わせた運用例
 - [ ] policy の変更を安全に行う手順（差分 → 検証 → 承認）

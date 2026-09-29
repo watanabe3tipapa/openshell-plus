@@ -123,7 +123,8 @@ The same steps work on a GPU runtime. Neither the screen nor the responses depen
 | [uv](https://docs.astral.sh/uv/) | any (recommended) | `uv --version` |
 | [OpenShell CLI](https://docs.nvidia.com/openshell/dev/about/installation) | latest | `openshell --version` |
 | Python | >= 3.12 | `python3 --version` |
-| Docker / OrbStack | optional (to run sandboxes) | `docker info` |
+| Docker Engine | optional (to run sandboxes; OpenShell requires 28.0 or later) | `docker version` |
+| [OrbStack](https://orbstack.dev/) | optional (recommended way to get Docker on macOS) | `orb version` |
 | Git | optional (deploy / contribution) | `git --version` |
 
 You can also install the OpenShell CLI with the packaged installer.
@@ -180,6 +181,243 @@ Browser ──REST/WS──→ FastAPI ──→ Backend (OpenShell SDK / demo)
 ### Publish
 
 Pushing to `main` deploys `site/` to GitHub Pages automatically (`.github/workflows/pages.yml`).
+
+## Environment setup on macOS with OrbStack
+
+To actually run sandboxes on macOS, using [OrbStack](https://orbstack.dev/) as the Docker runtime keeps the procedure shortest. The same `docker` commands work as with Docker Desktop.
+
+### 1. Install OrbStack
+
+```bash
+brew install orbstack
+open -a OrbStack
+```
+
+Use the `orb` command to start and stop without the GUI (for CI and headless environments).
+
+```bash
+orb            # start (same as orb start)
+orb stop       # stop
+```
+
+Auto-update does not run without the GUI. If you operate from the CLI only, update through Homebrew.
+
+```bash
+brew upgrade --greedy orbstack
+```
+
+### 2. Verify the Docker engine is running
+
+```bash
+orb version
+docker context ls
+docker info
+```
+
+OrbStack creates a Docker context named `orbstack` and uses it automatically for `docker` commands run from the terminal. If `orbstack` is missing from `docker context ls`, select it explicitly.
+
+```bash
+docker context use orbstack
+```
+
+If `docker info` does not respond, the engine is stopped.
+
+```bash
+orb start
+orb restart docker
+orb logs docker
+```
+
+**OpenShell requires Docker Engine 28.0 or later.** Check the version.
+
+```bash
+docker version --format 'server: {{.Server.Version}}'
+```
+
+### 3. Check the socket path (the most common macOS failure)
+
+Without an explicit `socket_path`, the OpenShell Docker driver auto-detects a socket and prefers `/var/run/docker.sock`. OrbStack only creates a symlink there **if you have admin access**. Without that symlink, OpenShell fails to find the socket and cannot create sandboxes.
+
+```bash
+ls -l /var/run/docker.sock 2>/dev/null || echo 'not created'
+```
+
+If it prints `not created`, point the gateway configuration at OrbStack's socket. The gateway reads `~/.config/openshell/gateway.toml` first and falls back to the Homebrew location (`$(brew --prefix)/var/openshell/gateway.toml`). Creating `~/.config/openshell/gateway.toml` is the reliable option.
+
+```bash
+mkdir -p ~/.config/openshell
+```
+
+`~/.config/openshell/gateway.toml`:
+
+```toml
+[openshell]
+version = 2
+
+[openshell.gateway]
+compute_driver = "docker"
+
+[openshell.drivers.docker]
+socket_path = "/Users/your-username/.orbstack/run/docker.sock"
+```
+
+**TOML does not expand `~` or shell variables.** Write the absolute path. Print the real value with:
+
+```bash
+echo "$HOME/.orbstack/run/docker.sock"
+```
+
+Validate the file before restarting the gateway.
+
+```bash
+openshell-gateway config preflight --path ~/.config/openshell/gateway.toml
+```
+
+### 4. Install the OpenShell gateway
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+openshell status
+```
+
+On macOS the installer uses Homebrew and runs the gateway as a Homebrew service on `https://localhost:17670`.
+
+```bash
+brew services list
+brew services restart openshell
+```
+
+### 5. Launch openshell-plus
+
+```bash
+git clone https://github.com/watanabe3tipapa/openshell-plus.git
+cd openshell-plus
+uv sync --all-extras
+
+export OSUI_GATEWAY_ENDPOINT=127.0.0.1:17670
+export OSUI_REQUIRE_GATEWAY=true
+./scripts/run-local.sh
+```
+
+Setting `OSUI_REQUIRE_GATEWAY=true` stops the app from quietly falling back to the demo backend when the connection fails. Confirm a real connection by checking that `backend` is `openshell` in `/api/health`.
+
+```bash
+curl -s http://127.0.0.1:8080/api/health | python3 -m json.tool
+```
+
+### 6. Check your CPU architecture
+
+```bash
+uname -m
+```
+
+| Output | Meaning | Images |
+|---|---|---|
+| `arm64` | Apple Silicon | OrbStack runs x86_64 images through Rosetta, so `linux/amd64`-only images still work |
+| `x86_64` | Intel Mac | `linux/amd64` is the default. `linux/arm64`-only images do not run |
+
+OpenShell's default sandbox image `nvcr.io/nvidia/base:ubuntu:24.04` is multi-architecture, so it works on either Mac. To pin amd64, use the environment variable:
+
+```bash
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `docker info` does not respond | Engine is stopped | `orb start` → `orb restart docker` → `orb logs docker` |
+| `orbstack` missing from `docker context ls` | CLI installed on its own | `brew reinstall orbstack` to recreate the context |
+| Sandbox creation fails with a Docker connection error | `/var/run/docker.sock` is missing | Set `socket_path` in the TOML as described in §3 |
+| TOML edits have no effect | Wrong configuration file location | Put it at `~/.config/openshell/gateway.toml`. Precedence is `--config` / `OPENSHELL_GATEWAY_CONFIG` → TOML → built-in default |
+| `openshell status` cannot connect | Homebrew service is stopped | `brew services restart openshell` |
+| Reports `server: 27.x` | Engine older than 28.0 | Update OrbStack to the latest version |
+| Push to a private registry fails | Different credential store | OrbStack uses `osxkeychain`; run `docker login` again |
+| x86_64-only image fails on an Intel Mac | Intel Macs cannot run arm64 | Pick an image with a `linux/amd64` variant |
+
+## OrbStack and AI agents
+
+openshell-plus exists to run agent workloads in sandboxes. OrbStack is explicitly designed with that use case in mind, which makes it fit better than other Docker runtimes.
+
+### OrbStack lists AI agents first among its isolated use cases
+
+An isolated machine is a Linux environment cut off from the macOS file system. OrbStack's documentation lists **"AI agents that run shell commands on their own"** as its first use case, followed by untrusted dependencies and build scripts, code review of unfamiliar projects, and experiments you would rather not have touch your home directory. The reasoning is supply-chain risk: a single `postinstall` script in a dependency can read your files, SSH keys, and environment variables.
+
+```bash
+orb create --isolated ubuntu agent-sandbox
+```
+
+An isolated machine differs from a normal one in four ways.
+
+| Normal machine | Isolated machine |
+|---|---|
+| Mounts your Mac's file system at `/mnt/mac` | Does not mount it |
+| Can run `mac` commands against macOS | Cannot |
+| Forwards the SSH agent by default | Disabled by default |
+| Passes through USB, serial, and sound | Does not |
+
+Internet access, `.orb.local` domains, and SSH plus `orb` access from your Mac still work. Add only what you need.
+
+```bash
+# Share just the working folder
+orb create --isolated --mount ~/project:/work ubuntu agent-sandbox
+
+# Also block other machines and host IPs, keeping only internet access
+orb create --isolated --isolate-network ubuntu agent-sandbox
+
+# Allow the SSH agent only when git push is required
+orb create --isolated --forward-ssh-agent ubuntu agent-sandbox
+```
+
+Settings can be changed later on an existing machine.
+
+```bash
+orb config set machine.agent-sandbox.isolated true
+orb config set machine.agent-sandbox.isolate_network true
+```
+
+**However, an isolated machine is not a complete security boundary.** All machines and containers share one kernel inside a single Linux VM. OrbStack states this itself and recommends a full VM with its own kernel for code that actively tries to escape the sandbox. It suits ordinary untrusted code and agents; it is not meant for malware analysis.
+
+### Pairing it with OpenShell's MicroVM driver gives two layers
+
+OpenShell has a `vm` driver that isolates each sandbox in its own lightweight VM, using Hypervisor.framework on macOS. Running the gateway inside an OrbStack isolated machine blocks the agent's path to the host in two stages.
+
+```toml
+[openshell.gateway]
+compute_driver = "vm"
+
+[openshell.drivers.vm]
+default_image = "nvcr.io/nvidia/base:ubuntu:24.04"
+```
+
+`vm` is never auto-detected, so it must be set explicitly (the `OPENSHELL_COMPUTE_DRIVER=vm` environment variable works too). Two caveats:
+
+- **VM sandboxes have no network interface.** All traffic flows through the supervisor on the host. For a proxy, use `http://host.openshell.internal:<port>`
+- **`--cpu` and `--memory` are ignored.** Use `vcpus` and `mem_mib`
+
+### Speed and power
+
+Like WSL 2, OrbStack uses a lightweight Linux VM with a shared kernel. Its core services are purpose-built in Swift, Go, Rust, and C, and the Docker engine runs in the same VM as Linux machines. File transfer builds on VirtioFS plus a low-latency bidirectional share of `~/OrbStack` on the macOS side. On Apple Silicon, Rosetta speeds up x86_64 emulation, and KASLR is strengthened without the KPTI syscall overhead.
+
+OrbStack publishes its own performance and power benchmarks using real development workloads: provisioning Open edX, building the PostHog image, Kubernetes with Helm, Supabase, and a 38-service Sentry stack. The measurements were taken in August 2023 comparing OrbStack v0.17.0 against Docker Desktop v4.22.0 on an M1 Max MacBook Pro. Numbers depend strongly on the workload, so read the [official benchmarks](https://docs.orbstack.dev/benchmarks) before drawing conclusions.
+
+Agents start and stop frequently, so low startup cost matters in practice. Machines can be created and destroyed in under a minute, and background CPU usage with no containers running is reported at around 0.1% on M1.
+
+### Operational rules for running agents
+
+- **Never expose the engine to the network.** Adding `tcp://0.0.0.0:2375` to the OrbStack `hosts` config lets any device on your LAN or VPN take full control of your Mac and all its data. OrbStack itself calls this extremely dangerous. Use SSH, or TLS with client authentication, if you need remote access
+- **Default agents to `read_only`.** Widen write access only where it is required
+- **`bind mount` exposes gateway host files to the sandbox.** It bypasses workspace isolation and filesystem policy, so enable `enable_bind_mounts` only when needed
+- **Pass secrets through providers, not environment variables.** Use `openshell provider`
+
+### Summary
+
+| Goal | Recommendation | Reason |
+|---|---|---|
+| Just get it running | OrbStack + Docker driver | Shortest path, and the `docker` commands work unchanged |
+| Run untrusted dependency scripts | OrbStack + isolated machine | The central agent use case OrbStack designs for |
+| Analyze code that attempts escape | A full VM such as UTM | A shared kernel cannot contain it |
+| Production-grade isolation | MicroVM driver | An independent VM boundary per sandbox |
 
 ## API
 
@@ -239,7 +477,7 @@ Contributions are welcome. Before making major changes, please open an [issue](h
 
 ```bash
 uv sync --all-extras
-uv run pytest        # 147 tests
+uv run pytest        # 149 tests
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright       # type check, zero errors

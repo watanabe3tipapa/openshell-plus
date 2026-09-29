@@ -123,7 +123,8 @@ GPU ランタイムでも同じ手順で動きます。デモの画面と応答�
 | [uv](https://docs.astral.sh/uv/) | 任意（推奨） | `uv --version` |
 | [OpenShell CLI](https://docs.nvidia.com/openshell/dev/about/installation) | 最新 | `openshell --version` |
 | Python | >= 3.12 | `python3 --version` |
-| Docker / OrbStack | 任意（sandbox 実行時） | `docker info` |
+| Docker Engine | 任意（sandbox 実行時。OpenShell は 28.0 以降を要求） | `docker version` |
+| [OrbStack](https://orbstack.dev/) | 任意（macOS で Docker を使う場合の推奨手段） | `orb version` |
 | Git | 任意（デプロイ・貢献時） | `git --version` |
 
 OpenShell CLI はパッケージマネージャ経由でも導入できます。
@@ -181,6 +182,243 @@ Browser ──REST/WS──→ FastAPI ──→ Backend（OpenShell SDK / demo�
 
 `main` ブランチへの push で `site/` が自動的に GitHub Pages へデプロイされます（`.github/workflows/pages.yml`）。
 
+## macOS + OrbStack での環境構築
+
+macOS で sandbox を実際に動かす場合、[OrbStack](https://orbstack.dev/) を Docker ランタイムに使うと手順が最も短くなります。Docker Desktop と同じ `docker` コマンドをそのまま使えます。
+
+### 1. OrbStack を導入する
+
+```bash
+brew install orbstack
+open -a OrbStack
+```
+
+GUI を使わずに起動・停止する場合は `orb` コマンドを使います（CI やヘッドレス環境向け）。
+
+```bash
+orb            # 起動（orb start と同じ）
+orb stop       # 停止
+```
+
+GUI が無いと自動更新は動きません。CLI だけで運用する場合は Homebrew 側から更新します。
+
+```bash
+brew upgrade --greedy orbstack
+```
+
+### 2. Docker engine の稼働を確かめる
+
+```bash
+orb version
+docker context ls
+docker info
+```
+
+OrbStack は `orbstack` という Docker context を作り、ターミナルからの `docker` コマンドは自動的にそれを使います。`docker context ls` に `orbstack` が無い場合は明示的に切り替えます。
+
+```bash
+docker context use orbstack
+```
+
+`docker info` が応答しない場合は engine が停止しています。
+
+```bash
+orb start
+orb restart docker
+orb logs docker
+```
+
+**OpenShell は Docker Engine 28.0 以降を要求します。** バージョンを確認します。
+
+```bash
+docker version --format 'server: {{.Server.Version}}'
+```
+
+### 3. socket のパスを確かめる（macOS で最も失敗しやすい箇所）
+
+OpenShell の Docker driver は `socket_path` を指定しなければ自動でソケットを探し、`/var/run/docker.sock` を優先します。しかし OrbStack が `/var/run/docker.sock` の symlink を作るのは**管理者権限が使える場合だけ**です。権限がない環境ではこの symlink が作られず、OpenShell 側がソケットを見つけられずに sandbox 作成へ進めません。
+
+```bash
+ls -l /var/run/docker.sock 2>/dev/null || echo '未作成'
+```
+
+`未作成` と表示された場合は、gateway の設定ファイルで OrbStack のソケットを明示します。gateway はまず `~/.config/openshell/gateway.toml` を読み、無ければ Homebrew の設定先（`$(brew --prefix)/var/openshell/gateway.toml`）を使います。`~/.config/openshell/gateway.toml` を置けば確実です。
+
+```bash
+mkdir -p ~/.config/openshell
+```
+
+`~/.config/openshell/gateway.toml`:
+
+```toml
+[openshell]
+version = 2
+
+[openshell.gateway]
+compute_driver = "docker"
+
+[openshell.drivers.docker]
+socket_path = "/Users/あなたのユーザー名/.orbstack/run/docker.sock"
+```
+
+**TOML は `~` やシェル変数を展開しません。** 絶対パスをそのまま書く必要があります。実際の値は次のコマンドで確認できます。
+
+```bash
+echo "$HOME/.orbstack/run/docker.sock"
+```
+
+編集後は gateway を再起動する前に preflight で検証します。
+
+```bash
+openshell-gateway config preflight --path ~/.config/openshell/gateway.toml
+```
+
+### 4. OpenShell gateway を導入する
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+openshell status
+```
+
+macOS では Homebrew 経由で導入され、gateway は Homebrew service として `https://localhost:17670` で動きます。
+
+```bash
+brew services list
+brew services restart openshell
+```
+
+### 5. openshell-plus を起動する
+
+```bash
+git clone https://github.com/watanabe3tipapa/openshell-plus.git
+cd openshell-plus
+uv sync --all-extras
+
+export OSUI_GATEWAY_ENDPOINT=127.0.0.1:17670
+export OSUI_REQUIRE_GATEWAY=true
+./scripts/run-local.sh
+```
+
+`OSUI_REQUIRE_GATEWAY=true` を付けると、接続に失敗したときに demo backend へ静かに落ちるのを防げます。実際に接続できたかは `/api/health` の `backend` が `openshell` かどうかで確認します。
+
+```bash
+curl -s http://127.0.0.1:8080/api/health | python3 -m json.tool
+```
+
+### 6. CPU アーキテクチャの確認
+
+```bash
+uname -m
+```
+
+| 出力 | 意味 | image の扱い |
+|---|---|---|
+| `arm64` | Apple Silicon | OrbStack が Rosetta で x86_64 image を実行します。`linux/amd64` のみの image でも動きます |
+| `x86_64` | Intel Mac | `linux/amd64` が既定です。`linux/arm64` のみの image は動きません |
+
+OpenShell の既定 sandbox イメージ `nvcr.io/nvidia/base/ubuntu:24.04` はマルチアーキテクチャ対応なので、どちらの Mac でも動きます。amd64 に固定したい場合は環境変数を使います。
+
+```bash
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+```
+
+### トラブルシューティング
+
+| 症状 | 原因 | 対処 |
+|---|---|---|
+| `docker info` が応答しない | engine が停止中 | `orb start` → `orb restart docker` → `orb logs docker` |
+| `docker context ls` に `orbstack` が無い | CLI を単体で導入した | `brew reinstall orbstack` して context を作り直す |
+| sandbox 作成が Docker 接続エラーで失敗 | `/var/run/docker.sock` が無い | §3 のとおり `socket_path` を TOML に書く |
+| TOML を変えても反映されない | 設定ファイルの場所が違う | `~/.config/openshell/gateway.toml` に置く。解決順は `--config` / `OPENSHELL_GATEWAY_CONFIG` → TOML → 既定値 |
+| `openshell status` が接続できない | Homebrew service が停止 | `brew services restart openshell` |
+| `server: 27.x` と表示される | Engine が 28.0 未満 | OrbStack を最新版へ更新する |
+| private registry への push が失敗 | credential store の差異 | OrbStack は `osxkeychain` を使います。`docker login` をやり直す |
+| x86_64 のみの image が動かない（Intel Mac） | Intel Mac は arm64 を実行できない | `linux/amd64` 版がある image を選ぶ |
+
+## OrbStack と AI エージェントの親和性
+
+openshell-plus が扱うのはエージェントの sandbox 実行です。OrbStack はこの用途を明示的に想定した設計になっているため、他の Docker ランタイムより噛み合います。
+
+### OrbStack 自身が AI エージェントを隔離用途の筆頭に挙げている
+
+OrbStack の isolated machine は、macOS のファイルシステムから切り離した Linux 環境です。OrbStack のドキュメントは用途の第 1 項目に**「自分でシェルコマンドを実行する AI エージェント」**を挙げ、続けて「信頼できない依存関係やビルドスクリプト」「未知のプロジェクトのコードレビュー」「home ディレクトリに触れてほしくない実験」を示しています。依存パッケージ 1 個の `postinstall` スクリプトがファイル・SSH 鍵・環境変数を読み出せる、という供給網リスクが根拠です。
+
+```bash
+orb create --isolated ubuntu agent-sandbox
+```
+
+通常の machine と isolated machine の違いは次の 4 点です。
+
+| 通常の machine | isolated machine |
+|---|---|
+| `/mnt/mac` で Mac のファイルが見える | マウントされない |
+| `mac` コマンドで macOS 上の操作を呼べる | 呼べない |
+| SSH agent を既定で forward する | 既定で無効 |
+| USB / serial / 音が渡る | 渡らない |
+
+一方、インターネット、`.orb.local` ドメイン、Mac からの SSH と `orb` アクセスは使えます。必要なものだけを明示的に足します。
+
+```bash
+# 作業フォルダだけを共有する
+orb create --isolated --mount ~/project:/work ubuntu agent-sandbox
+
+# 他の machine と host IP への通信も遮断し、インターネットだけ残す
+orb create --isolated --isolate-network ubuntu agent-sandbox
+
+# git push が必要な場合だけ SSH agent を許可する
+orb create --isolated --forward-ssh-agent ubuntu agent-sandbox
+```
+
+既存 machine の設定は後から変えられます。
+
+```bash
+orb config set machine.agent-sandbox.isolated true
+orb config set machine.agent-sandbox.isolate_network true
+```
+
+**ただし isolated machine は完全なセキュリティ境界ではありません。** すべての machine と container は単一の Linux VM 上で 1 つの kernel を共有します。OrbStack 自身が「kernel を狙って脱出を試みるコードには使わず、独立した kernel を持つ full VM を使うこと」と明記しています。信頼できない依存関係やエージェントの通常運用には十分ですが、悪意あるコードの解析には向きません。
+
+### OpenShell の MicroVM driver と組み合わせると 2 段構えになる
+
+OpenShell には sandbox を軽量 VM 単位で分離する `vm` driver があり、macOS では Hypervisor.framework を使います。OrbStack の isolated machine の中で gateway を動かせば、エージェントが host へ出る経路を 2 段で塞いだ構成になります。
+
+```toml
+[openshell.gateway]
+compute_driver = "vm"
+
+[openshell.drivers.vm]
+default_image = "nvcr.io/nvidia/base/ubuntu:24.04"
+```
+
+`vm` は自動検出されないため明示指定が必要です（環境変数 `OPENSHELL_COMPUTE_DRIVER=vm` でも可）。注意点は 2 つあります。
+
+- **VM sandbox にはネットワークインターフェースがありません。** すべての通信は host 上の supervisor を経由します。proxy を使う場合は `http://host.openshell.internal:<port>` を指定します
+- **`--cpu` / `--memory` は効きません。** `vcpus` と `mem_mib` を設定します
+
+### 実行速度と電池消費
+
+OrbStack は WSL 2 と同じく、軽量 Linux VM の kernel 共有方式を採用しています。主要なサービスは Swift / Go / Rust / C で自作し、Docker engine と Linux machine を同じ VM 内で動かせます。ファイル転送は VirtioFS に加えて macOS 側の `~/OrbStack` を双方向で低遅延共有する構成です。Apple Silicon では Rosetta で x86_64 のエミュレーションを高速化し、kernel の KASLR を強化しつつ KPTI に伴うシステムコールのオーバーヘッドを避けています。
+
+性能と電池消費のベンチマークは OrbStack 自身が公開しています。Open edX の provision、PostHog の image build、Kubernetes + Helm、Supabase、Sentry の 38 service 構成といった実開発ワークロードが対象で、測定は 2023 年 8 月、OrbStack v0.17.0 と Docker Desktop v4.22.0 の比較、M1 Max MacBook Pro で行われました。数値はワークロードに強く依存するため、[公式のベンチマーク](https://docs.orbstack.dev/benchmarks)を確認してください。
+
+エージェントは短時間で起動と停止を繰り返すため、起動コストの小ささが実運用で効きます。machine の作成と破棄は 1 分未満で済み、コンテナを動かしていない間の CPU 使用量は M1 で約 0.1% と報告されています。
+
+### エージェントを動かすときの運用ルール
+
+- **engine をネットワークへ公開しないでください。** OrbStack の `hosts` 設定に `tcp://0.0.0.0:2375` を足すと、LAN や VPN 上の端末から Mac の全データを完全に制御できてしまいます。OrbStack 自身が「極めて危険」と明記しています。必要な場合は SSH か、TLS と client 認証を併用してください
+- **エージェントには `read_only` を既定にしてください。** 書き込みを許可する範囲は必要なものだけ広げます
+- **`bind mount` は gateway host のファイルを sandbox へ露出します。** workspace の分離とファイル policy を迂回できる経路になるため、`enable_bind_mounts` は必要な場合のみ有効にします
+- **機密情報は環境変数ではなく provider 経由で渡します。** `openshell provider` を使ってください
+
+### 使い分けのまとめ
+
+| 目的 | 推奨 | 理由 |
+|---|---|---|
+| まず動かして試す | OrbStack + Docker driver | 手順が最も短く、`docker` コマンドをそのまま使える |
+| 依存スクリプトを走らせたい | OrbStack + isolated machine | OrbStack が想定するエージェント用途の中心 |
+| 脱出を試みるコードを解析したい | full VM（UTM など） | kernel を共有する方式では防げない |
+| 本番相当の隔離 | MicroVM driver | sandbox ごとに独立した VM 境界 |
+
 ## API
 
 | メソッド | パス | 用途 |
@@ -235,7 +473,7 @@ Browser ──REST/WS──→ FastAPI ──→ Backend（OpenShell SDK / demo�
 
 ```bash
 uv sync --all-extras
-uv run pytest        # 147 テスト
+uv run pytest        # 149 テスト
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright       # 型チェック（エラー 0）
