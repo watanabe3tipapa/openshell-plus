@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenShell Plus — OpenShell をブラウザから操作する UI/UX</title>
 <meta name="description" content="NVIDIA OpenShell のサンドボックス管理・コマンド実行をブラウザから行える FastAPI 製ダッシュボード。ローカル / Cloudflare Tunnel / Vercel / Google Colab に対応。">
-<meta name="theme-color" content="#0b0f19">
+<meta name="theme-color" content="#ffffff">
 <meta property="og:type" content="website">
 <meta property="og:title" content="OpenShell Plus — OpenShell をブラウザから操作する UI/UX">
 <meta property="og:description" content="サンドボックスの作成・監視・シェル実行をブラウザだけで。">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -28,7 +31,8 @@
       <span>Bearer Token 認証</span>
     </div>
     <div class="cta">
-      <a class="btn" data-link="dashboard" href="#quickstart">クイックスタート</a>
+      <a class="btn" data-link="colab" href="https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener">Colab ですぐ試す</a>
+      <a class="btn btn-ghost" data-link="dashboard" href="#quickstart">クイックスタート</a>
       <a class="btn btn-ghost" data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">ソースコード</a>
     </div>
   </div>
@@ -280,18 +284,40 @@ openshell sandbox create --name demo</code></pre>
   </div>
 </section>
 
-<section>
-  <h2>Google Colab で試す</h2>
+<section id="colab">
+  <h2>Colab で 3 ステップ・clone 不要</h2>
   <p class="lead">
-    リポジトリを clone しなくても、ブラウザだけでデモを動かせます。GPU ランタイムでもそのまま実行できます。
+    ブラウザだけでデモを動かせます。ローカルへの clone もビルドも不要です。GPU ランタイムでも同じ手順で動きます。
   </p>
-  <p>
+  <p class="colab-open">
     <a href="https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener">
       <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" width="164" height="24">
     </a>
   </p>
+  <div class="cards">
+    <div class="card">
+      <h3>1. Colab で開く</h3>
+      <p>上のバッジをクリックします。Google アカウントがあればそのままで開きます。所要は数秒です。</p>
+    </div>
+    <div class="card">
+      <h3>2. すべてのセルを実行</h3>
+      <p>メニュー「ランタイム」から「すべてのセルを実行」を選びます。1〜2 分かかります。セルは依存順に並んでおり、個別に選ぶ必要はありません。</p>
+    </div>
+    <div class="card">
+      <h3>3. 画面を操作する</h3>
+      <p>出力セルの下に iframe でダッシュボードが現れます。一覧の「新規作成」で <code>demo-box</code> を作り、コンソールに <code>ls</code> を入力して「実行」を押してください。</p>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>セル内部で起きていること</strong>
+    パッケージ導入（GitHub から） → <code>OSUI_DEMO=true</code> と <code>OSUI_MODE=colab</code> で uvicorn 起動 → <code>127.0.0.1:8080</code> が接続を受けるまで最大 30 秒待機 → iframe 埋め込み。
+  </div>
+  <div class="callout callout-accent">
+    <strong>実行前に知っておいてください</strong>
+    ランタイムはアイドルで自動終了し、VM がリセットされても消えます。続きから試すときは「すべてのセルを実行」をもう一度実行してください。Colab には Docker daemon も OpenShell gateway もないため demo backend で起動し、実 sandbox の操作は発生しません。GPU ランタイムでも画面と応答は GPU に依存しません。
+  </div>
   <ul>
-    <li><b>ノートブック</b> <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener"><code>deploy/colab/openshell_colab.ipynb</code></a> — セルを順に実行すると、パッケージ導入 → demo モードで起動 → ポート待機 → iframe 埋め込みまで一通り動きます。</li>
+    <li><b>ノートブック</b> <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener"><code>deploy/colab/openshell_colab.ipynb</code></a> — 同じノートブックを全環境で使えます。用途別のレシピは <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/USAGE.md" target="_blank" rel="noopener">USAGE.md</a> を参照してください。</li>
     <li><b>公開トンネルは使いません。</b> Colab の FAQ は、インタラクティブな計算と無関係な Web サービス提供、および無料枠での「ノートブック UI を迂回して Web UI を主眼として操作すること」およびリモートプロキシへの接続を禁じています。恒久トンネルは VM リセットで切れ、アイドルでランタイムも終了します。</li>
   </ul>
 </section>
@@ -346,6 +372,10 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
     <strong>gateway が見つからない場合</strong>
     <code>openshell status</code> で endpoint を確認してください。パッケージの既定 TLS ポートは <code>17670</code> です（gateway ごとに異なる場合があります）。接続に失敗すると自動的に demo mode へ切り替わり、サンプルデータが操作できます。失敗として扱いたい場合は <code>OSUI_REQUIRE_GATEWAY=true</code> を指定します。
   </div>
+  <p>
+    目的別の活用レシピ、コンソールの制約（パイプやリダイレクトが効かない点など）、トラブルシューティングは
+    <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/USAGE.md">USAGE.md</a> にまとめています。
+  </p>
 </section>
 
 <section>

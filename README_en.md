@@ -8,6 +8,7 @@ openshell-plus is a web UI/UX for [NVIDIA OpenShell](https://github.com/NVIDIA/O
 [![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
 [日本語](README.md) | [English](README_en.md)
 
@@ -80,15 +81,38 @@ This repository also addresses the fact that pseudocode in a design guide often 
 - **`deploy/Dockerfile.ui`** — an image for running the UI inside an OpenShell sandbox
 - **`deploy/cloudflared/config.yml.example`** — named-tunnel ingress example
 - **[Landing page](site/)** — deployed to GitHub Pages automatically
+- **[USAGE.md](USAGE.md)** — recipes by goal, constraints, troubleshooting (Japanese)
 - **[Architecture diagram](site/diagrams/openshell-plus-architecture.html)** — browser to FastAPI to gateway to isolation boundary (generated with Archify, also embedded in the LP)
 
-## Try it on Google Colab
+## Try it on Google Colab (3 steps, no clone)
 
-No local clone needed — run the demo straight from the browser.
+The demo runs in the browser. There is nothing to clone or build locally.
+
+| Step | Action | Time |
+|---|---|---|
+| 1 | Click the badge below to open the notebook in Colab | a few seconds |
+| 2 | Choose "Runtime" then "Run all" | 1-2 minutes |
+| 3 | The dashboard appears in an iframe under the output cell | the page stays as is |
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
-- **Notebook** [`deploy/colab/openshell_colab.ipynb`](deploy/colab/openshell_colab.ipynb) — run the cells in order to install the package, start in demo mode, wait for the port, and embed the dashboard in an iframe
+Once step 3 finishes, create a sandbox named `demo-box` in the list and run `ls` in the console. A demo response means the app started correctly.
+
+The cells are already in dependency order, so there is no need to pick them one by one. What they do:
+
+1. Install the package from `git+https://github.com/watanabe3tipapa/openshell-plus`
+2. Set `OSUI_DEMO=true` and `OSUI_MODE=colab`, then start uvicorn
+3. Wait up to 30 seconds for `127.0.0.1:8080` to accept connections
+4. Embed the dashboard in an iframe
+
+**Worth knowing before you run it**
+
+- **The runtime shuts down when idle and is lost when the VM is reset.** To continue, run "Run all" again
+- Colab has neither a Docker daemon nor an OpenShell gateway, so the app starts with the demo backend. No real sandbox is involved
+- Public tunnels are intentionally disabled because the Colab terms prohibit them. See `USAGE.md` and the notebook
+- File: [`deploy/colab/openshell_colab.ipynb`](deploy/colab/openshell_colab.ipynb)
+
+The same steps work on a GPU runtime. Neither the screen nor the responses depend on the GPU.
 
 ## Installation
 
@@ -199,8 +223,9 @@ For newcomers, reading in this order gives you the full picture.
 
 1. [Live site](https://watanabe3tipapa.github.io/openshell-plus/) — features, deployment targets, environment variables
 2. `README.md` (Japanese) — concept and operations
-3. `openshell-uiux-guide.html` — the original UI/UX guide
-4. [DEV-MEMO.md](DEV-MEMO.md) — design decisions and verification notes per phase
+3. `USAGE.md` (Japanese) — recipes by goal, constraints, troubleshooting
+4. `openshell-uiux-guide.html` — the original UI/UX guide (pseudocode; the real SDK diff is summarised in the "A Corrector for Stale Docs" section)
+5. [DEV-MEMO.md](DEV-MEMO.md) — design decisions and verification notes per phase
 
 ## Contributing
 

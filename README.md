@@ -8,6 +8,7 @@ openshell-plus は [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) の�
 [![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
 [日本語](README.md) | [English](README_en.md)
 
@@ -80,15 +81,38 @@ OpenShell は強いサンドボックス実行環境ですが、操作の入口�
 - **`deploy/Dockerfile.ui`** — OpenShell sandbox 内で UI を動かすためのイメージ
 - **`deploy/cloudflared/config.yml.example`** — named tunnel の ingress 設定例
 - **[LP](site/)** — GitHub Pages へ自動デプロイ
+- **[USAGE.md](USAGE.md)** — 目的別の活用レシピ・制約・トラブルシューティング
 - **[構成図](site/diagrams/openshell-plus-architecture.html)** — ブラウザ → FastAPI → gateway → 隔離境界の全体像（Archify 生成、LP にも埋め込み済み）
 
-## Colab で試す
+## Colab で試す（3 ステップ・clone 不要）
 
-リポジトリを clone しなくても、ブラウザだけでデモを動かせます。
+ブラウザだけでデモを動かせます。ローカルへの clone もビルドも不要です。
+
+| 手順 | 操作 | 目安 |
+|---|---|---|
+| 1 | 下のバッジをクリックして Colab でノートブックを開く | 数秒 |
+| 2 | メニュー「ランタイム」から「すべてのセルを実行」を選ぶ | 1〜2 分 |
+| 3 | 出力セルの下に iframe でダッシュボードが現れる | 画面はそのまま |
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
-- **ノートブック** [`deploy/colab/openshell_colab.ipynb`](deploy/colab/openshell_colab.ipynb) — セルを順に実行すると、パッケージ導入 → demo モードで起動 → ポート待機 → iframe 埋め込みまで一通り動く
+3 が完了したら、一覧の「新規作成」で `demo-box` を作り、コンソールに `ls` を入力して「実行」を押してください。demo 応答が返れば起動は成功です。
+
+セルは依存順に並んでおり、個別に選ぶ必要はありません。各セルが内部で行っていることは次の 4 つです。
+
+1. `git+https://github.com/watanabe3tipapa/openshell-plus` からパッケージを導入
+2. `OSUI_DEMO=true` と `OSUI_MODE=colab` を設定して uvicorn を起動
+3. `127.0.0.1:8080` が接続を受けるまで最大 30 秒待つ
+4. ダッシュボードを iframe に埋め込む
+
+**実行前に知っておいてください**
+
+- **ランタイムはアイドルで自動終了し、VM がリセットされても消えます。** 続きから試すときは「すべてのセルを実行」をもう一度実行してください
+- Colab には Docker daemon も OpenShell gateway もないため、demo backend で起動します。実 sandbox の操作は発生しません
+- 公開トンネルは意図的に無効です。Colab の利用規約に抵触するため（理由は [USAGE.md](USAGE.md) とノートブック内に記載）
+- ファイル: [`deploy/colab/openshell_colab.ipynb`](deploy/colab/openshell_colab.ipynb)
+
+GPU ランタイムでも同じ手順で動きます。デモの画面と応答は GPU に依存しません。
 
 ## インストールと起動
 
@@ -196,8 +220,9 @@ Browser ──REST/WS──→ FastAPI ──→ Backend（OpenShell SDK / demo�
 
 1. [公開サイト（LP）](https://watanabe3tipapa.github.io/openshell-plus/) — 機能一覧・デプロイ形態・環境変数
 2. `README.md`（本書）— コンセプトと運用
-3. `openshell-uiux-guide.html` — 元の UI/UX ガイド
-4. [DEV-MEMO.md](DEV-MEMO.md) — フェーズごとの設計判断と検証記録
+3. [USAGE.md](USAGE.md) — 目的別の活用レシピ・制約・トラブルシューティング
+4. `openshell-uiux-guide.html` — 元の UI/UX ガイド（擬似 API。実 SDK との差分は「ドキュメント訂正ツール」節に整理してあります）
+5. [DEV-MEMO.md](DEV-MEMO.md) — フェーズごとの設計判断と検証記録
 ## コントリビューション
 
 コントリビューションは歓迎します。大きな変更を行う前に [Issue](https://github.com/watanabe3tipapa/openshell-plus/issues) を立てて相談してください。一般的な手順:
