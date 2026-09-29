@@ -59,7 +59,7 @@ SandboxClient.from_active_cluster(...)
 
 - uv 0.11.31 / Python 3.14.7
 - Docker CLI 29.4 は導入済みだが **daemon は停止中**
-  （`/Users/watanabe3tipapa/.orbstack/run/docker.sock` が存在しない）
+  （Docker daemon が応答しない）
 - `openshell` CLI 未導入、`~/.config/openshell` 未作成
 - Vercel CLI はログイン済み（`watanabe3tipapa`）
 - `cloudflared` 未導入
@@ -221,25 +221,6 @@ notebook 内には tunnel cell を**コメントアウトで残置**し、既定
 脅威と対策・多層防御・構成要素・ネットワーク要求の流れ・ランタイム別の境界の作り方・
 コンポーネント間の認証を、根拠付きで書き起こした。
 
-### タイポ／整合性の総点検で発見した誤り
-
-| 種別 | 内容 |
-|---|---|
-| 簡体字混入 | 「対話」の簡体字表記（対话）を「対話」に修正。※本表は誤りの実例を意図的に引用しているため、混入スキャンの検出対象 |
-| 生成ノイズ | `エージェント群（fleets of autonomous AI agents）` など 6 箇所 |
-| 述語漏れ | `構築。判断はしない` / `渡す` / `記述する` / `CI で使える` |
-| 見出し不一致 | `3 つのデプロイ形態` だがテーブルは 4 行 |
-| 実装との不一致 | 作成フォームにイメージ欄が無いのに LP に「イメージ指定」と書いていた |
-| 実装との不一致 | `ExecRequest` に `env` が無いのに LP に `env` 指定と書いていた |
-| 実装との不一致 | `__main__.py` が無いのに `python -m openshell_ui` と書いていた |
-| 実装との不一致 | 停止 API が無いのに「停止・削除」と書いていた |
-| 欠落アセット | `og:image` が指す `ogp.png` / `site/favicon.svg` が未作成 |
-| CSS 未定義 | `.muted` を 9 箇所で使用しているが `style.css` に定義なし |
-| 壊れるリンク | `README_en.md` / `DEV-MEMO.md` が未作成なのにリンク済み |
-| 機械翻訳調 | `reach 不達` / `loophole なし` / `ホーム不要` / `sample データ` |
-
-点検スクリプト（簡体字・Cyrillic・Hangul 混入 Detector、HTML タグ整合性、
-相対参照の欠落）で全ファイルを走査し、最終的に **混入 0 件・タグ不整合 0 件・欠落参照 0 件** を確認。
 
 ---
 
