@@ -152,7 +152,7 @@ openshell-plus/
 ### 既知の制約
 
 - `StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated` が出るが動作する。
-- `tests/` は空だった。Phase 5 で 147 テストを追加し、`pytest` / `ruff` / `pyright` を
+- `tests/` は空だった。Phase 5 で 149 テストを追加し、`pytest` / `ruff` / `pyright` を
   すべて green にした。
 
 ---
@@ -246,9 +246,9 @@ notebook 内には tunnel cell を**コメントアウトで残置**し、既定
 
 | ゲート | 結果 |
 |---|---|
-| `uv run pytest` | 147 passed |
+| `uv run pytest` | 149 passed |
 | `uv run ruff check .` | All checks passed |
-| `uv run ruff format --check .` | 30 files already formatted |
+| `uv run ruff format --check .` | 31 files already formatted |
 | `uv run pyright` | 0 errors, 0 warnings |
 
 - `tests/` を新設。`helpers.py` に `make_settings()` / `make_client()`、
@@ -279,8 +279,63 @@ notebook 内には tunnel cell を**コメントアウトで残置**し、既定
 - `pyproject.toml`: `asyncio_mode = "auto"`（pytest-asyncio 不在で警告）と
   notebook を触る `ruff format` を除外。
 
+## Phase 6: ドキュメント監査と v0.1.1（2026-09-29）
+
+### 監査の方法
+
+- 対象は `USAGE.md` / `README.md` / `README_en.md` / `DEV-MEMO.md` / `site/index.html` /
+  `deploy/colab/openshell_colab.ipynb` / `scripts/*.sh` / `policy/ui-policy.yaml`。
+- Markdown のリンクとアンカーは GitHub 本体の slugger（`github-slugger` v2 の実装）を
+  Node で再現して 13 件を実測。`・` や `（）` が除去される挙動も確認した。
+- 文書中の `OSUI_*` は `Settings` のフィールド（`env_prefix="OSUI_"`）と 1 対 1 で突き合わせ、
+  実装に存在しない変数が無いのを確認した。
+- 表の数値・エラー文言・既定値はコードの該当行と照合し、pytest / ruff / pyright を実行して確認した。
+
+### 実バグ
+
+`deploy/Dockerfile.ui:10` の `ENV OSUI_MODE=web` は `RunMode` に存在しない値だった。
+`detect_mode()` は `ValueError` を握りつぶして自動判定へ落ちるので、
+`OPENSHELL_SANDBOX_ID` が無い環境では `local` に静かに誤判定されていた。`sandbox` に修正した。
+
+### 文書と実装の食い違い（7 件）
+
+| 箇所 | 誤り | 実態 |
+|---|---|---|
+| `USAGE.md` §5 | 「WebSocket 経路のタイムアウトは 60 秒固定」 | 固定しているのは UI クライアント。`app.js:236` が `timeout_seconds: 60` を送信する |
+| `USAGE.md` §6.6 | 「`deploy/` 配下の `policy/ui-policy.yaml`」 | 実体はリポジトリ直下の `policy/` |
+| `USAGE.md` §9 | 「`--host` の直接指定などで回避されない」 | CLI に `--host` は無い。バインド先の変更は `OSUI_HOST` のみ |
+| `USAGE.md` §6.1 | 「名前は一意である必要がある」 | 同一 workspace 内での一意（§6.2 と矛盾していた） |
+| `USAGE.md` §2 | 「demo 固定」 | 分岐は `OSUI_DEMO` と到達不能時のフォールバックのみ。モード指定では固定されない |
+| `USAGE.md` §2 | 表に `sandbox` の行が無い | `README.md` / `README_en.md` / `.env.example` には記載がある |
+| `DEV-MEMO.md` Phase 5 | テスト 147 件 / 30 files | 実際は 149 件 / 31 files |
+
+### 誤字・体裁
+
+- 中国語のまま残っていた 2 語（`自定义` / `做不到`）を日本語へ戻した。
+- `deploy/colab/openshell_colab.ipynb` の「30 秒を越える」→「30 秒を超える」。
+- 全角コロン、括弧、中国語風クォート、和文中のハイフン（`両方を-review`）、
+  リスト項目の行末ピリオドなど 9 箇所。
+- `README.md` の `## コントリビューション` 直前の空行欠落。
+- `USAGE.md` §6.2 の `OSUI_WORKSPACE=team-a` に `export` が無く、そのまま貼っても
+  子プロセスへ伝わらない状態だった。
+
+### 検証
+
+| ゲート | 結果 |
+|---|---|
+| `uv run pytest` | 149 passed |
+| `uv run ruff check .` | All checks passed |
+| `uv run ruff format --check .` | 31 files already formatted |
+| `uv run pyright` | 0 errors, 0 warnings, 0 informations |
+
+Markdown リンク / アンカーは 13 件すべて正常。ノートブックの JSON も有効。
+リンク切れゼロ、幽霊の環境変数ゼロ、中国語混入ゼロ。
+
 ## 未対応（設計・設定項目として残す）
 
+- `deploy/Dockerfile.ui` の image build は未検証（この環境の Docker daemon が停止中）。
+  `OSUI_MODE=sandbox` が正しいこと、および `OSUI_HOST=0.0.0.0` のため
+  `OSUI_AUTH_TOKEN` 未設定だと起動が拒否されることはコード上の確認のみ。
 - `src/openshell_ui/api/exec.py` の WebSocket ハンドシェイクで、`Sec-WebSocket-Protocol` の
   token 位置が 2 番目以降の場合に echo する subprotocol がずれる可能性がある
 - `policy/ui-policy.yaml` のスキーマ適合性が未検証

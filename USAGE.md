@@ -54,10 +54,13 @@ curl -s http://127.0.0.1:8080/api/health | python3 -m json.tool
 |---|---|---|---|---|
 | 手元の gateway を自分で操作 | `local` | `./scripts/run-local.sh` | 実 gateway | 自分しか見ない |
 | 自分のドメインで HTTPS 公開 | `cloudflare` | `./scripts/run-cloudflare.sh` | 実 gateway | tunnel とドメインの準備が必要 |
-| URL を共有してデモを見せる | `vercel` | `./scripts/deploy-vercel.sh` | demo 固定 | Vercel から手元の gateway へは到達できない |
-| Colab の GPU 上で動かす | `colab` | ノートブックを順に実行 | demo 固定 | 公開トンネルは開始しない |
+| URL を共有してデモを見せる | `vercel` | `./scripts/deploy-vercel.sh` | demo に落ちる | Vercel から手元の gateway へは到達できない |
+| Colab の GPU 上で動かす | `colab` | ノートブックを順に実行 | demo に落ちる | 公開トンネルは開始しない |
+| UI 自身を OpenShell sandbox 内で動かす | `sandbox` | `deploy/Dockerfile.ui` をビルド | 実 gateway | `OSUI_HOST=0.0.0.0` になるため `OSUI_AUTH_TOKEN` 必須。sandbox から gateway へ到達できる経路が必要 |
 
-**named tunnel と Quick Tunnel は別物です。** Quick Tunnel は `./scripts/run-cloudflare.sh quick` で起動し、URL が実行ごとに変わる・SSE が使えない・同時接続が 200 リクエスト上限、という制約があります。短い確認やデモには向き、長時間の検証には named tunnel を使ってください。
+demo に落ちる条件は `OSUI_DEMO=true` が指定されているか、gateway へ到達できないことだけです（分岐は `factory.py`）。`vercel` と `colab` は手元に gateway が無いため結果として demo になりますが、モード指定だけでは demo に固定されません。
+
+**named tunnel と Quick Tunnel は別物です。** Quick Tunnel は `./scripts/run-cloudflare.sh quick` で起動し、URL が実行ごとに変わる・SSE が使えない・同時接続数の上限が 200、という制約があります。短い確認やデモには向き、長時間の検証には named tunnel を使ってください。
 
 Vercel 形態はトークンを設定してから deploy します（スクリプトが未設定なら中断します）。
 
@@ -85,7 +88,7 @@ export OSUI_REQUIRE_GATEWAY=true
 uv run python -m openshell_ui
 ```
 
-**`OSUI_REQUIRE_GATEWAY=true` は常用してください。** 既定の `false` だと、gateway 側の障害が「demo に落ちた無関係な一覧」として見え、失敗が静かに閉じます。`true` にすると接続できないまま起動が失敗し、原因がそのまま分かります。
+**`OSUI_REQUIRE_GATEWAY=true` は常用してください。** 既定の `false` だと、gateway 側の障害が「demo に落ちた無関係な一覧」として見え、失敗が静かに終わります。`true` にすると接続できないまま起動が失敗し、原因がそのまま分かります。
 
 ### 3.3 mTLS / OIDC を組み合わせる
 
@@ -168,8 +171,8 @@ export OSUI_REQUIRE_GATEWAY=true
 - loopback 以外の bind でトークン未設定だと、起動そのものが拒否されます
 - トークンを受け取れる場所は 3 か所です
   - `Authorization: Bearer <token>`（REST と WebSocket の主経路）
-  - `Sec-WebSocket-Protocol: bearer.<token>`（ブラウザの WebSocket はヘッダーを自定义できないため）
-  - `?token=<token>`（SSE と event source）
+  - `Sec-WebSocket-Protocol: bearer.<token>`（ブラウザの WebSocket はヘッダーをカスタムできないため）
+  - `?token=<token>`（SSE と `EventSource`）
 - WebSocket の認証に失敗すると close code **4401** で切断されます
 - トークンは画面上でセッション内だけ保持されます（タブを閉じると消えます）
 - 静的アセットはトークンなしで配信されます（機密情報は含まれません）
@@ -201,12 +204,12 @@ const parts = command.split(/\s+/).filter(Boolean);
 { "command": ["bash", "-lc", "ls | wc -l"] }
 ```
 
-引数 1 個にスクリプト一式を入れる形なので空白や記号をそのまま渡せます。ブラウザから做不到処理は、REST API に切り替えてください。
+引数 1 個にスクリプト一式を入れる形なので空白や記号をそのまま渡せます。ブラウザからできない処理は、REST API に切り替えてください。
 
 その他の UI の仕様:
 
 - **作業ディレクトリ（`workdir`）の入力欄はありません**（API でのみ指定可能）
-- **WebSocket 経路のタイムアウトは 60 秒固定**です。REST 経路は `OSUI_EXEC_DEFAULT_TIMEOUT`（既定 60、上限 `OSUI_EXEC_MAX_TIMEOUT` 既定 1800）が効きます
+- **ブラウザ UI は WebSocket 送信時に `timeout_seconds: 60` を固定で送ります**（UI 側の制約です）。API 側は経路を問わず `timeout_seconds` を受け付け、未指定なら `OSUI_EXEC_DEFAULT_TIMEOUT`（既定 60）、超過分は `OSUI_EXEC_MAX_TIMEOUT`（既定 1800）で頭打ちになります
 - 一覧の自動更新は 8 秒ごとで、exec の実行中は一時停止します
 - exec の `env` は未実装です。渡すと 422 で拒否されます（黙って無視はしません）
 
@@ -214,7 +217,7 @@ const parts = command.split(/\s+/).filter(Boolean);
 
 ### 6.1 使い捨ての検証環境
 
-「作って試して捨てる」を繰り返す用途です。名前は一意である必要があります。
+「作って試して捨てる」を繰り返す用途です。名前は同一 workspace 内で一意である必要があります（workspace をまたいだ重複は §6.2）。
 
 ```bash
 TOKEN=your-token
@@ -239,9 +242,9 @@ curl -s -X DELETE "$BASE/api/sandboxes/try-01" -H "Authorization: Bearer $TOKEN"
 
 ```bash
 # 起動時に固定
-OSUI_WORKSPACE=team-a
+export OSUI_WORKSPACE=team-a
 
-# リクエスト単位“上書き”（クエリ、POST は JSON の workspace）
+# リクエスト単位の「上書き」（クエリ、POST は JSON の workspace）
 curl -s "$BASE/api/sandboxes?workspace=team-b" -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -271,7 +274,7 @@ curl -s -X POST "$BASE/api/sandboxes/web/exec" \
   -d '{"command":["bash","-lc","uv sync && pytest -q"],"timeout_seconds":1200}'
 ```
 
-`timeout_seconds` は `OSUI_EXEC_MAX_TIMEOUT`（既定 1800）で丸められます。標準出力を逐次見たい場合は WebSocket か SSE を使ってください。
+`timeout_seconds` は `OSUI_EXEC_MAX_TIMEOUT`（既定 1800）で頭打ちにされます。標準出力を逐次見たい場合は WebSocket か SSE を使ってください。
 
 ```bash
 curl -N -s "$BASE/api/sandboxes/web/exec/stream?command=ls&token=$TOKEN"
@@ -313,7 +316,7 @@ curl -fsS -X DELETE "$BASE/api/sandboxes/ci-box" \
 
 UI から操作できるのは作成と実行だけです。sandbox の中で実際の agent を動かす場合は、`policy` と `provider profile` の準備が別途必要です。次の順で整備します。
 
-1. `deploy/` 配下の `policy/ui-policy.yaml` を参考に、ネットワーク規則を記述する
+1. リポジトリ直下の `policy/ui-policy.yaml` を参考に、ネットワーク規則を記述する
 2. `openshell profile import --url <URL>` で provider profile を投入する
 3. agent が出そうになる接続は、承認の前に `openshell rule get` で一覧する
 4. `openshell rule approve` / `openshell rule reject` で判断する
@@ -338,14 +341,14 @@ network_policies:
       - path: /usr/bin/uv
 ```
 
-`network_policies` の各エントリは宛先（`endpoints`）と、その接続を行えるバイナリ（`binaries`）の組です。**宛先だけを広くしてもバイナリを制限すれば通るが、バイナリだけを広げると宛先も開いてしまう**、という向き合いになるので、両方を-review します。
+`network_policies` の各エントリは宛先（`endpoints`）と、その接続を行えるバイナリ（`binaries`）の組です。**宛先だけを広くしてもバイナリを制限すれば通るが、バイナリだけを広げると宛先も開いてしまう**、という向き合いになるので、両方をレビューします。
 
 ## 7. demo backend の正体
 
 gateway に接続できないときの代替です。**画面と操作は本物ですが、データは捏造されています。**
 
 - 作成直後は `provisioning`、0.8 秒後に `ready` になります
-- 応答するのは次のコマンドだけです: `ls` / `dir` / `pwd` / `whoami` / `hostname` / `uname` / `python` / `python3` / `node` / `uv` / `echo`
+- 応答するのは次のコマンドだけです：`ls` / `dir` / `pwd` / `whoami` / `hostname` / `uname` / `python` / `python3` / `node` / `uv` / `echo`
 - それ以外は `demo: executed '<コマンド>' without a real sandbox` を返すだけです。**終了コードは常に 0** なので、失敗したコマンドを察知できません
 - sandbox の内容・ファイル・ネットワークは実在しません
 
@@ -356,7 +359,7 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | `refusing to bind ...` で起動しない | loopback 以外の bind でトークン未設定 | `OSUI_AUTH_TOKEN` を設定するか `OSUI_HOST=127.0.0.1` に戻す |
-| 一覧が demo の内容に見える | gateway に接続できていない | `openshell status` を確認。`OSUI_REQUIRE_GATEWAY=true` にして原因を露出させる |
+| 一覧が demo の内容に見える | gateway に接続できていない | `openshell status` を確認。`OSUI_REQUIRE_GATEWAY=true` にして原因を表面化させる |
 | すべて 401 | トークン未設定または不一致 | トークンを再確認。画面上の認証パネルの値と `OSUI_AUTH_TOKEN` を比較 |
 | WebSocket がすぐ切断される | close code 4401 | トークンが一致していません |
 | SSE が 404 | `OSUI_SSE_ENABLED=false` | Quick Tunnel では意図的に無効です。WebSocket を使ってください |
@@ -377,12 +380,12 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 
 ## 9. やってはいけないこと
 
-- **`OSUI_AUTH_TOKEN` を設定せずに `0.0.0.0` へ bind する** — 起動は拒否されますが、`--host` の直接指定などで回避されないよう、意図を確認してください
+- **`OSUI_AUTH_TOKEN` を設定せずに `0.0.0.0` へ bind する** — 起動は拒否されます。バインド先を変える手段は `OSUI_HOST` だけですが、公開する前に意図を確認してください
 - **トークンを URL に埋め込んだまま共有する** — `?token=` は各省のアクセスログや履歴に残ります。SSE 以外の用途では `Authorization` を使ってください
 - **Vercel から手元の gateway に届くことと期待する** — 到達できません。Vercel は demo の確認用です
 - **Colab で公開トンネルを張る** — Colab の利用規約に抵触します。ノートブック内の該当セルはコメントアウトされています
 - **demo backend の成功を実 gateway の成功として扱う** — 擬似応答です
-- **`exec` に `env` を渡して設定を期待する** — 未実装で 422 になります。環境変数はイメージや entrypoint で仕込んでください。
+- **`exec` に `env` を渡して設定を期待する** — 未実装で 422 になります。環境変数はイメージや entrypoint で仕込んでください
 - **UI のコンソールでパイプやリダイレクトを使う** — 効きません。REST API の `command` 配列で `bash -lc` を挟んでください
 - **policy を理由なく緩める** — 緩めた量为そのまま攻撃面です。`read_only` に追加するより `read_write` を増やす方が影響範囲が広いです
 

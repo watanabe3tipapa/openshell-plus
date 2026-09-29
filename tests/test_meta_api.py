@@ -29,7 +29,7 @@ def test_version_comes_from_package_metadata(open_client: TestClient) -> None:
 
 
 def test_version_is_a_plain_release_number() -> None:
-    """v0.1.0 として切り出すため、dev  suffix のない数字 3 段であることを確認する。"""
+    """リリースとして切り出すため、dev suffix のない数字 3 段であることを確認する。"""
     from openshell_ui import __version__
 
     assert re.fullmatch(r"\d+\.\d+\.\d+", __version__)

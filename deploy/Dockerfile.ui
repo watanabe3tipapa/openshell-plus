@@ -7,7 +7,7 @@ COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
 ENV PATH="/root/.local/bin:${PATH}"
-ENV OSUI_MODE=web
+ENV OSUI_MODE=sandbox
 ENV OSUI_HOST=0.0.0.0
 ENV OSUI_PORT=8080
 
