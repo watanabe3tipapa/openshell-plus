@@ -1,0 +1,13 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+.vercel/
+node_modules/
+dist/
+site/.cache/
+# Archify visual-check が生成する検証 evidence（成果物ではない）
+site/diagrams/*.visual-check.*

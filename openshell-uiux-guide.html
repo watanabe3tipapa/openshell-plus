@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenShell UI/UX 統合ガイド — ローカル・Web 両対応</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --surface: #111827;
+            --surface-raised: #1f2937;
+            --ink: #f3f4f6;
+            --muted: #9ca3af;
+            --accent: #76b900;
+            --accent-weak: rgba(118, 185, 0, 0.12);
+            --accent-glow: rgba(118, 185, 0, 0.25);
+            --line: rgba(255, 255, 255, 0.08);
+            --code-bg: #0d1117;
+            --warning: #f59e0b;
+            --warning-weak: rgba(245, 158, 11, 0.12);
+            --info: #3b82f6;
+            --info-weak: rgba(59, 130, 246, 0.12);
+            --step--2: clamp(0.75rem, 0.7rem + 0.2vw, 0.875rem);
+            --step--1: clamp(0.875rem, 0.8rem + 0.3vw, 1rem);
+            --step-0: clamp(1rem, 0.9rem + 0.4vw, 1.125rem);
+            --step-1: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+            --step-2: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+            --step-3: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+            --step-4: clamp(2.5rem, 1.8rem + 3vw, 3.5rem);
+            --space: clamp(1rem, 0.7rem + 1.2vw, 1.75rem);
+            --radius: 10px;
+            --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -10px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: "Inter", "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            line-height: 1.75;
+            font-size: var(--step-0);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-raised);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
+        }
+
+        /* Selection */
+        ::selection {
+            background: var(--accent-weak);
+            color: var(--ink);
+        }
+
+        /* Links */
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+        h1 {
+            font-size: var(--step-4);
+            font-weight: 800;
+        }
+        h2 {
+            font-size: var(--step-3);
+            margin-top: calc(var(--space) * 2.5);
+            margin-bottom: var(--space);
+            padding-bottom: calc(var(--space) * 0.5);
+            border-bottom: 1px solid var(--line);
+        }
+        h3 {
+            font-size: var(--step-2);
+            margin-top: calc(var(--space) * 1.8);
+            margin-bottom: calc(var(--space) * 0.6);
+            color: var(--ink);
+        }
+        h4 {
+            font-size: var(--step-1);
+            margin-top: calc(var(--space) * 1.2);
+            margin-bottom: calc(var(--space) * 0.4);
+            color: var(--muted);
+        }
+        p {
+            margin-bottom: var(--space);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 0 var(--space);
+        }
+
+        /* Header / Hero */
+        header {
+            background: linear-gradient(160deg, var(--bg) 0%, #0f172a 60%, var(--surface) 100%);
+            border-bottom: 1px solid var(--line);
+            padding: calc(var(--space) * 4) 0 calc(var(--space) * 2.5);
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-weak);
+            color: var(--accent);
+            font-size: var(--step--2);
+            font-weight: 600;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            margin-bottom: calc(var(--space) * 0.8);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .hero-badge::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .hero-title {
+            background: linear-gradient(135deg, var(--ink) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: calc(var(--space) * 0.6);
+        }
+        .hero-subtitle {
+            font-size: var(--step-1);
+            color: var(--muted);
+            max-width: 640px;
+            line-height: 1.6;
+        }
+        .hero-meta {
+            display: flex;
+            gap: calc(var(--space) * 1.2);
+            margin-top: calc(var(--space) * 1.2);
+            font-size: var(--step--1);
+            color: var(--muted);
+        }
+        .hero-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* Table of Contents */
+        .toc {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 1.2);
+            margin: calc(var(--space) * 2) 0;
+        }
+        .toc-title {
+            font-size: var(--step--1);
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: calc(var(--space) * 0.6);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .toc ul {
+            list-style: none;
+            columns: 2;
+            column-gap: calc(var(--space) * 1.5);
+        }
+        .toc li {
+            margin-bottom: 0.35rem;
+            break-inside: avoid;
+        }
+        .toc a {
+            color: var(--muted);
+            font-size: var(--step--1);
+            display: block;
+            padding: 0.2rem 0;
+            transition: color 0.2s;
+        }
+        .toc a:hover {
+            color: var(--ink);
+            text-decoration: none;
+        }
+        @media (max-width: 600px) {
+            .toc ul { columns: 1; }
+        }
+
+        /* Code blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 0.9);
+            overflow-x: auto;
+            font-family: "JetBrains Mono", "Noto Sans JP", monospace;
+            font-size: var(--step--2);
+            line-height: 1.65;
+            margin: calc(var(--space) * 0.8) 0 calc(var(--space) * 1.2);
+            position: relative;
+        }
+        code {
+            font-family: "JetBrains Mono", "Noto Sans JP", monospace;
+            font-size: 0.9em;
+            background: var(--surface-raised);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: #e5e7eb;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+        }
+        .code-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--surface-raised);
+            color: var(--muted);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.25rem 0.6rem;
+            border-bottom-left-radius: var(--radius);
+            border-top-right-radius: calc(var(--radius) - 1px);
+        }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 0.9) calc(var(--space) * 1.1);
+            margin: calc(var(--space) * 1) 0;
+            border-left: 3px solid;
+            font-size: var(--step--1);
+        }
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .callout-info {
+            background: var(--info-weak);
+            border-color: var(--info);
+            color: #bfdbfe;
+        }
+        .callout-warning {
+            background: var(--warning-weak);
+            border-color: var(--warning);
+            color: #fde68a;
+        }
+        .callout-accent {
+            background: var(--accent-weak);
+            border-color: var(--accent);
+            color: #d9f99d;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: calc(var(--space) * 1) 0;
+            font-size: var(--step--1);
+        }
+        th, td {
+            padding: 0.7rem 0.9rem;
+            text-align: left;
+            border-bottom: 1px solid var(--line);
+        }
+        th {
+            font-weight: 600;
+            color: var(--accent);
+            font-size: var(--step--2);
+            letter-spacing: 0.02em;
+            background: var(--surface);
+        }
+        tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: calc(var(--space) * 0.6) 0 calc(var(--space) * 1) calc(var(--space) * 1.2);
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+        li::marker {
+            color: var(--accent);
+        }
+
+        /* Architecture diagram (CSS-based) */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: calc(var(--space) * 0.7);
+            margin: calc(var(--space) * 1.2) 0;
+        }
+        .arch-box {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 0.8);
+            text-align: center;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .arch-box:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .arch-box .arch-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .arch-box .arch-label {
+            font-weight: 600;
+            font-size: var(--step--1);
+            margin-bottom: 0.2rem;
+        }
+        .arch-box .arch-desc {
+            font-size: var(--step--2);
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .arch-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 1.2rem;
+        }
+        @media (max-width: 640px) {
+            .arch-grid { grid-template-columns: 1fr; }
+            .arch-arrow { transform: rotate(90deg); }
+        }
+
+        /* Step cards */
+        .step-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 1.1);
+            margin: calc(var(--space) * 0.8) 0;
+            position: relative;
+        }
+        .step-num {
+            position: absolute;
+            top: -12px;
+            left: calc(var(--space) * 1);
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 800;
+            font-size: var(--step--2);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .step-title {
+            font-weight: 700;
+            font-size: var(--step-1);
+            margin-bottom: calc(var(--space) * 0.5);
+            margin-top: 0.3rem;
+        }
+
+        /* File tree */
+        .file-tree {
+            font-family: "JetBrains Mono", monospace;
+            font-size: var(--step--2);
+            background: var(--code-bg);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: calc(var(--space) * 0.8);
+            line-height: 1.8;
+            color: var(--muted);
+        }
+        .file-tree .dir {
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .file-tree .file {
+            color: #c9d1d9;
+        }
+        .file-tree .comment {
+            color: #8b949e;
+        }
+
+        /* Section anchor */
+        .section-anchor {
+            color: var(--accent);
+            text-decoration: none;
+            margin-left: 0.3rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        h2:hover .section-anchor,
+        h3:hover .section-anchor {
+            opacity: 1;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--line);
+            margin-top: calc(var(--space) * 4);
+            padding: calc(var(--space) * 2) 0 calc(var(--space) * 3);
+            text-align: center;
+            color: var(--muted);
+            font-size: var(--step--1);
+        }
+
+        /* Print */
+        @media print {
+            body {
+                background: #fff;
+                color: #111;
+            }
+            header::before { display: none; }
+            .hero-title {
+                background: none;
+                -webkit-text-fill-color: #111;
+                color: #111;
+            }
+            pre {
+                background: #f5f5f5;
+                border-color: #ddd;
+            }
+            .callout-info { background: #e0f2fe; color: #0369a1; }
+            .callout-warning { background: #fef3c7; color: #92400e; }
+            .callout-accent { background: #ecfccb; color: #3f6212; }
+        }
+        @page {
+            size: A4;
+            margin: 16mm;
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="hero-badge">NVIDIA OpenShell</div>
+        <h1 class="hero-title">UI/UX 統合ガイド</h1>
+        <p class="hero-subtitle">
+            ローカル実行環境と外部 Web 環境の両方で動作する UI/UX を uv + Python エコシステムで構築する手法を解説。
+            OpenShell SDK、サービス公開、ポリシー制御を活用した安全なハイブリッド UI アーキテクチャ。
+        </p>
+        <div class="hero-meta">
+            <span>uv / Python 3.11+</span>
+            <span>OpenShell SDK</span>
+            <span>FastAPI / Gradio</span>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+
+    <!-- TOC -->
+    <nav class="toc">
+        <div class="toc-title">目次</div>
+        <ul>
+            <li><a href="#overview">1. アーキテクチャ概要</a></li>
+            <li><a href="#setup">2. uv プロジェクト初期化</a></li>
+            <li><a href="#sdk">3. OpenShell SDK 連携</a></li>
+            <li><a href="#local-ui">4. ローカル UI の実装</a></li>
+            <li><a href="#web-ui">5. Web UI の実装</a></li>
+            <li><a href="#service-expose">6. サービス公開戦略</a></li>
+            <li><a href="#policy">7. セキュリティとポリシー</a></li>
+            <li><a href="#hybrid">8. ハイブリッド実行モード</a></li>
+            <li><a href="#deployment">9. デプロイメント例</a></li>
+            <li><a href="#reference">10. 参考リソース</a></li>
+        </ul>
+    </nav>
+
+    <!-- Section 1 -->
+    <section id="overview">
+        <h2>1. アーキテクチャ概要 <a href="#overview" class="section-anchor">#</a></h2>
+        <p>
+            OpenShell は Gateway（コントロールプレーン）と Sandbox（データプレーン）の 2 層構造で構成されています。
+            UI/UX を追加する場合、以下の 2 つのユースケースを同時に満たす必要があります。
+        </p>
+
+        <div class="arch-grid">
+            <div class="arch-box">
+                <div class="arch-icon">&#128187;</div>
+                <div class="arch-label">ローカル UI</div>
+                <div class="arch-desc">開発者のマシン上で直接動作するデスクトップ / CLI / ブラウザ UI</div>
+            </div>
+            <div class="arch-arrow">&#8594;</div>
+            <div class="arch-box">
+                <div class="arch-icon">&#127760;</div>
+                <div class="arch-label">外部 Web UI</div>
+                <div class="arch-desc">Gateway 経由で公開された HTTPS エンドポイントとして動作する Web UI</div>
+            </div>
+        </div>
+
+        <p>
+            両方を 1 つのコードベースで実現するための推奨アーキテクチャは、<strong>「FastAPI + 軽量フロントエンド」</strong>です。
+            FastAPI は ASGI サーバとして動作し、ローカルでは <code>uvicorn</code> で直接起動、
+            外部公開時は OpenShell の <code>service expose</code> で Gateway 経由の HTTPS URL を取得します。
+        </p>
+
+        <div class="callout callout-info">
+            <div class="callout-title">&#8505; なぜ FastAPI か</div>
+            OpenShell の Python SDK は同期的・非同期の両方の API を提供しており、FastAPI の非同期ハンドラと相性が良いです。また、Gradio をマウントすれば AI チャット UI も同じエンドポイントに統合できます。
+        </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section id="setup">
+        <h2>2. uv プロジェクト初期化 <a href="#setup" class="section-anchor">#</a></h2>
+        <p>
+            uv は高速な Python パッケージマネージャ兼仮想環境管理ツールです。
+            OpenShell プロジェクトを uv で初期化する手順は以下の通りです。
+        </p>
+
+        <div class="step-card">
+            <div class="step-num">1</div>
+            <div class="step-title">プロジェクト作成</div>
+            <pre><span class="code-label">bash</span><code>uv init openshell-ui
+cd openshell-ui
+uv venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate</code></pre>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num">2</div>
+            <div class="step-title">依存パッケージ追加</div>
+            <pre><span class="code-label">bash</span><code># コア依存
+uv add openshell fastapi uvicorn[standard] gradio httpx
+
+# 開発依存
+uv add --dev pyright ruff pytest</code></pre>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num">3</div>
+            <div class="step-title">プロジェクト構造</div>
+            <div class="file-tree">
+openshell-ui/
+&#9500;&#9472;&#9472; pyproject.toml          <span class="comment"># uv 管理の依存定義</span>
+&#9500;&#9472;&#9472; .venv/                  <span class="comment"># 仮想環境</span>
+&#9500;&#9472;&#9472; src/
+&#9474;   &#9492;&#9472;&#9472; openshell_ui/
+&#9474;       &#9500;&#9472;&#9472; __init__.py
+&#9474;       &#9500;&#9472;&#9472; <span class="dir">api/</span>              <span class="comment"># FastAPI ルータ</span>
+&#9474;       &#9474;   &#9500;&#9472;&#9472; __init__.py
+&#9474;       &#9474;   &#9500;&#9472;&#9472; sandbox.py      <span class="comment"># サンドボックス管理 API</span>
+&#9474;       &#9474;   &#9492;&#9472;&#9472; chat.py         <span class="comment"># AI チャット API</span>
+&#9474;       &#9500;&#9472;&#9472; <span class="dir">ui/</span>               <span class="comment"># フロントエンド資材</span>
+&#9474;       &#9474;   &#9500;&#9472;&#9472; index.html
+&#9474;       &#9474;   &#9492;&#9472;&#9472; app.js
+&#9474;       &#9500;&#9472;&#9472; <span class="dir">core/</span>             <span class="comment"># ビジネスロジック</span>
+&#9474;       &#9474;   &#9500;&#9472;&#9472; client.py       <span class="comment"># OpenShell SDK ラッパ</span>
+&#9474;       &#9474;   &#9492;&#9472;&#9472; config.py       <span class="comment"># 設定管理</span>
+&#9474;       &#9492;&#9472;&#9472; <span class="dir">gradio_app/</span>       <span class="comment"># Gradio UI 定義</span>
+&#9474;           &#9492;&#9472;&#9472; main.py
+&#9492;&#9472;&#9472; tests/
+    &#9492;&#9472;&#9472; test_api.py
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section id="sdk">
+        <h2>3. OpenShell SDK 連携 <a href="#sdk" class="section-anchor">#</a></h2>
+        <p>
+            OpenShell の Python SDK は <code>SandboxClient</code> を中心に、サンドボックスの作成・実行・監視をプログラムから制御できます。
+            UI/UX レイヤーから呼び出すためのラッパーを作成します。
+        </p>
+
+        <h3>3.1 クライアントラッパーの実装</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/core/client.py
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+import openshell
+from openshell import SandboxClient, SandboxSession
+
+class OpenShellManager:
+    """OpenShell SDK の非同期ラッパー"""
+
+    def __init__(self, gateway_url: str | None = None):
+        self.gateway_url = gateway_url
+        self._client: SandboxClient | None = None
+
+    async def connect(self) -> None:
+        """Gateway への接続を確立"""
+        if self.gateway_url:
+            self._client = SandboxClient(target=self.gateway_url)
+        else:
+            # ローカルの active cluster を自動検出
+            self._client = SandboxClient.from_active_cluster()
+
+    async def list_sandboxes(self):
+        """サンドボックス一覧を取得"""
+        if not self._client:
+            raise RuntimeError("Not connected")
+        return self._client.list()
+
+    async def create_sandbox(
+        self,
+        name: str,
+        image: str = "base",
+        cpu: str = "1",
+        memory: str = "2Gi",
+        gpu: bool = False,
+        labels: dict | None = None,
+    ):
+        """サンドボックスを作成"""
+        if not self._client:
+            raise RuntimeError("Not connected")
+        spec = {
+            "name": name,
+            "image": image,
+            "cpu": cpu,
+            "memory": memory,
+            "gpu": gpu,
+            "labels": labels or {},
+        }
+        return self._client.create(spec=spec)
+
+    async def exec_command(self, sandbox_id: str, command: list[str]) -> str:
+        """サンドボックス内でコマンドを実行"""
+        session = SandboxSession(self._client, sandbox_id)
+        result = session.exec(command)
+        return result.stdout
+
+    async def delete_sandbox(self, sandbox_id: str) -> None:
+        """サンドボックスを削除"""
+        self._client.delete(sandbox_id)
+
+    async def disconnect(self) -> None:
+        if self._client:
+            self._client.close()
+            self._client = None
+
+
+@asynccontextmanager
+async def get_manager() -> AsyncGenerator[OpenShellManager, None]:
+    manager = OpenShellManager()
+    await manager.connect()
+    try:
+        yield manager
+    finally:
+        await manager.disconnect()</code></pre>
+
+        <h3>3.2 設定管理</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/core/config.py
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+class Settings(BaseSettings):
+    """アプリケーション設定"""
+    app_name: str = "OpenShell UI"
+    debug: bool = False
+    host: str = "0.0.0.0"
+    port: int = 8080
+    openshell_gateway: str | None = None
+    enable_gradio: bool = True
+    cors_origins: list[str] = ["*"]
+
+    class Config:
+        env_prefix = "OSUI_"
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()</code></pre>
+    </section>
+
+    <!-- Section 4 -->
+    <section id="local-ui">
+        <h2>4. ローカル UI の実装 <a href="#local-ui" class="section-anchor">#</a></h2>
+        <p>
+            ローカル環境では、開発者が <code>uv run</code> で即座に UI を起動できることが重要です。
+            2 つの選択肢を提供します：軽量な REST API ベースの Web UI と、Gradio による AI チャット UI です。
+        </p>
+
+        <h3>4.1 FastAPI メインアプリケーション</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/api/main.py
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+
+from openshell_ui.core.config import get_settings, Settings
+from openshell_ui.core.client import OpenShellManager
+from openshell_ui.api import sandbox, chat
+import gradio as gr
+from openshell_ui.gradio_app.main import create_gradio_app
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    app.state.manager = OpenShellManager()
+    await app.state.manager.connect()
+    yield
+    # Shutdown
+    await app.state.manager.disconnect()
+
+app = FastAPI(
+    title="OpenShell UI",
+    description="Local & Web Hybrid UI for NVIDIA OpenShell",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+# CORS
+settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# API ルータ
+app.include_router(sandbox.router, prefix="/api/sandboxes", tags=["sandboxes"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+
+# Gradio マウント
+if settings.enable_gradio:
+    gradio_app = create_gradio_app()
+    app = gr.mount_gradio_app(app, gradio_app, path="/gradio")
+
+# 静的ファイル
+app.mount("/", StaticFiles(directory="src/openshell_ui/ui", html=True), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("openshell_ui.api.main:app", host=settings.host, port=settings.port, reload=settings.debug)</code></pre>
+
+        <h3>4.2 サンドボックス管理 API</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/api/sandbox.py
+from fastapi import APIRouter, Request, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+
+router = APIRouter()
+
+class SandboxCreate(BaseModel):
+    name: str
+    image: str = "base"
+    cpu: str = "1"
+    memory: str = "2Gi"
+    gpu: bool = False
+
+class SandboxResponse(BaseModel):
+    id: str
+    name: str
+    status: str
+    labels: dict
+
+@router.get("/", response_model=list[SandboxResponse])
+async def list_sandboxes(request: Request):
+    manager = request.app.state.manager
+    boxes = await manager.list_sandboxes()
+    return [
+        SandboxResponse(
+            id=b.id,
+            name=b.name,
+            status=b.status,
+            labels=b.labels or {},
+        )
+        for b in boxes
+    ]
+
+@router.post("/", response_model=SandboxResponse)
+async def create_sandbox(payload: SandboxCreate, request: Request):
+    manager = request.app.state.manager
+    sb = await manager.create_sandbox(
+        name=payload.name,
+        image=payload.image,
+        cpu=payload.cpu,
+        memory=payload.memory,
+        gpu=payload.gpu,
+    )
+    return SandboxResponse(
+        id=sb.id,
+        name=sb.name,
+        status=sb.status,
+        labels=sb.labels or {},
+    )
+
+@router.delete("/{sandbox_id}")
+async def delete_sandbox(sandbox_id: str, request: Request):
+    manager = request.app.state.manager
+    await manager.delete_sandbox(sandbox_id)
+    return {"deleted": sandbox_id}</code></pre>
+
+        <h3>4.3 Gradio AI チャット UI</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/gradio_app/main.py
+import gradio as gr
+from openshell_ui.core.client import get_manager
+
+async def chat_with_sandbox(message: str, history: list):
+    """サンドボックス内のエージェントと対話"""
+    async with get_manager() as manager:
+        # 例: 既存のサンドボックスにコマンド送信
+        # 実際にはエージェント固有のプロトコルに応じて実装
+        result = await manager.exec_command(
+            sandbox_id="my-sandbox",
+            command=["echo", f"Received: {message}"],
+        )
+        return result
+
+def create_gradio_app() -> gr.Blocks:
+    with gr.Blocks(title="OpenShell Chat", theme=gr.themes.Soft()) as demo:
+        gr.Markdown("# OpenShell Agent Chat")
+        gr.Markdown("サンドボックス内の AI エージェントと対話します。")
+
+        chatbot = gr.Chatbot(type="messages")
+        msg = gr.Textbox(label="メッセージ", placeholder="何か質問してください...")
+        clear = gr.Button("クリア")
+
+        msg.submit(chat_with_sandbox, [msg, chatbot], [chatbot])
+        clear.click(lambda: None, None, chatbot, queue=False)
+
+    return demo</code></pre>
+
+        <div class="callout callout-accent">
+            <div class="callout-title">&#9889; ローカル起動</div>
+            <code>uv run python -m openshell_ui.api.main</code> で <code>http://localhost:8080</code> が立ち上がります。
+            <code>/</code> で静的 UI、<code>/gradio</code> でチャット UI、<code>/api/</code> で REST API が利用できます。
+        </div>
+    </section>
+
+    <!-- Section 5 -->
+    <section id="web-ui">
+        <h2>5. Web UI の実装 <a href="#web-ui" class="section-anchor">#</a></h2>
+        <p>
+            外部 Web 環境では、OpenShell Gateway 経由で HTTPS エンドポイントとして公開します。
+            フロントエンドは軽量な Vanilla JS または React/Vue を選択できます。
+            ここでは依存を最小化するため、Vanilla JS + Fetch API を採用します。
+        </p>
+
+        <h3>5.1 フロントエンド実装</h3>
+        <pre><span class="code-label">html</span><code>&lt;!-- src/openshell_ui/ui/index.html --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;OpenShell UI&lt;/title&gt;
+    &lt;style&gt;
+        :root { --accent: #76b900; --bg: #0b0f19; --surface: #111827; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: #e5e7eb; max-width: 960px; margin: 0 auto; padding: 2rem; }
+        .card { background: var(--surface); border: 1px solid #374151; border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn:hover { opacity: 0.85; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #374151; }
+        .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;OpenShell Dashboard&lt;/h1&gt;
+    &lt;div class="card"&gt;
+        &lt;h2&gt;サンドボックス一覧&lt;/h2&gt;
+        &lt;button class="btn" onclick="loadSandboxes()"&gt;更新&lt;/button&gt;
+        &lt;table id="sandbox-table"&gt;
+            &lt;thead&gt;&lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;名前&lt;/th&gt;&lt;th&gt;状態&lt;/th&gt;&lt;th&gt;操作&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+            &lt;tbody&gt;&lt;/tbody&gt;
+        &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div class="card"&gt;
+        &lt;h2&gt;新規作成&lt;/h2&gt;
+        &lt;input id="name" placeholder="名前"&gt;
+        &lt;button class="btn" onclick="createSandbox()"&gt;作成&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;script src="app.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+        <pre><span class="code-label">javascript</span><code>// src/openshell_ui/ui/app.js
+const API_BASE = "/api";
+
+async function loadSandboxes() {
+    const res = await fetch(`${API_BASE}/sandboxes/`);
+    const data = await res.json();
+    const tbody = document.querySelector("#sandbox-table tbody");
+    tbody.innerHTML = data.map(sb => `
+        &lt;tr&gt;
+            &lt;td&gt;${sb.id}&lt;/td&gt;
+            &lt;td&gt;${sb.name}&lt;/td&gt;
+            &lt;td&gt;&lt;span class="status"&gt;&lt;/span&gt; ${sb.status}&lt;/td&gt;
+            &lt;td&gt;&lt;button class="btn" onclick="deleteSandbox('${sb.id}')"&gt;削除&lt;/button&gt;&lt;/td&gt;
+        &lt;/tr&gt;
+    `).join("");
+}
+
+async function createSandbox() {
+    const name = document.getElementById("name").value;
+    await fetch(`${API_BASE}/sandboxes/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+    });
+    loadSandboxes();
+}
+
+async function deleteSandbox(id) {
+    await fetch(`${API_BASE}/sandboxes/${id}`, { method: "DELETE" });
+    loadSandboxes();
+}
+
+loadSandboxes();</code></pre>
+    </section>
+
+    <!-- Section 6 -->
+    <section id="service-expose">
+        <h2>6. サービス公開戦略 <a href="#service-expose" class="section-anchor">#</a></h2>
+        <p>
+            OpenShell の <code>service expose</code> コマンドは、サンドボックス内で動作するサービスを Gateway 経由で公開する最も重要な機能です。
+            ローカル Gateway とリモート Gateway で挙動が異なります。
+        </p>
+
+        <table>
+            <thead>
+                <tr><th>Gateway 種別</th><th>公開 URL</th><th>認証</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>ローカル (loopback)</td><td><code>http://*.openshell.localhost</code></td><td>不要</td><td>開発・デバッグ</td></tr>
+                <tr><td>リモート (HTTPS)</td><td><code>https://*.openshell.example.com</code></td><td>Gateway 認証必須</td><td>本番・共有</td></tr>
+            </tbody>
+        </table>
+
+        <h3>6.1 公開手順</h3>
+        <pre><span class="code-label">bash</span><code># 1. サンドボックス作成（UI サーバを含むカスタムイメージ）
+openshell sandbox create --from ./my-ui-image --name ui-sandbox
+
+# 2. サンドボックス内で UI サーバ起動（localhost:8080 で待受）
+openshell sandbox connect ui-sandbox
+sandbox$ uv run python -m openshell_ui.api.main
+
+# 3. 別ターミナルからポート公開
+openshell service expose ui-sandbox 8080 web-ui
+
+# 4. 出力された URL を確認
+openshell service get ui-sandbox web-ui</code></pre>
+
+        <h3>6.2 自動公開スクリプト</h3>
+        <pre><span class="code-label">bash</span><code>#!/usr/bin/env bash
+# scripts/deploy-ui.sh
+set -euo pipefail
+
+SANDBOX_NAME="${1:-openshell-ui}"
+PORT="${2:-8080}"
+SERVICE_NAME="${3:-web}"
+
+# サンドボックスが存在しなければ作成
+if ! openshell sandbox list | grep -q "$SANDBOX_NAME"; then
+    echo "Creating sandbox: $SANDBOX_NAME"
+    openshell sandbox create --name "$SANDBOX_NAME" --from base
+fi
+
+# サービスを公開
+echo "Exposing port $PORT as service '$SERVICE_NAME'..."
+URL=$(openshell service expose "$SANDBOX_NAME" "$PORT" "$SERVICE_NAME" --format json | jq -r '.url')
+echo "UI available at: $URL"</code></pre>
+
+        <div class="callout callout-warning">
+            <div class="callout-title">&#9888; 注意</div>
+            リモート Gateway で公開する場合、Gateway の認証（OIDC / mTLS）が必要です。OpenShell SDK は Bearer Token 自動更新に対応しているため、長時間稼働する UI でも認証が切れることはありません。
+        </div>
+    </section>
+
+    <!-- Section 7 -->
+    <section id="policy">
+        <h2>7. セキュリティとポリシー <a href="#policy" class="section-anchor">#</a></h2>
+        <p>
+            UI を公開する場合、特に外部 Web 環境ではセキュリティポリシーの設定が不可欠です。
+            OpenShell のポリシーは YAML で宣言的に記述し、ネットワーク・推論ルーティングはホットリロード可能です。
+        </p>
+
+        <h3>7.1 UI 用ポリシー例</h3>
+        <pre><span class="code-label">yaml</span><code># policy/ui-policy.yaml
+apiVersion: openshell.nvidia.com/v1
+kind: Policy
+metadata:
+  name: ui-sandbox-policy
+spec:
+  network:
+    egress:
+      # UI サーバが必要とする外部 API のみ許可
+      - to: https://api.github.com
+        methods: [GET]
+        paths: ["/zen", "/repos/*"]
+      - to: https://api.openai.com
+        methods: [POST]
+        paths: ["/v1/chat/completions"]
+      # 推論ルーティング
+      - to: https://inference.local
+        methods: [POST, GET]
+  inference:
+    local:
+      provider: ollama-local
+      model: codellama:7b
+  filesystem:
+    allow:
+      - /workspace/**
+      - /tmp/**
+    deny:
+      - /etc/shadow
+      - ~/.ssh/*
+  process:
+    allow:
+      - python
+      - uv
+      - node
+    deny:
+      - sudo
+      - su</code></pre>
+
+        <h3>7.2 ポリシー適用</h3>
+        <pre><span class="code-label">bash</span><code># 実行中のサンドボックスにポリシーを適用
+openshell policy set ui-sandbox --policy policy/ui-policy.yaml --wait
+
+# 現在のポリシーを確認
+openshell policy get ui-sandbox</code></pre>
+
+        <h3>7.3 CORS と認証の分離</h3>
+        <p>
+            FastAPI 側の CORS は「どのオリジンからのリクエストを受け入れるか」を制御し、
+            OpenShell のポリシーは「サンドボックスがどの外部ホストに接続できるか」を制御します。
+            両者は独立して機能するため、以下のように設計します。
+        </p>
+        <ul>
+            <li><strong>FastAPI CORS</strong>: フロントエンドのホスト（ローカルなら <code>localhost</code>、Web なら公開ドメイン）のみ許可</li>
+            <li><strong>OpenShell Network Policy</strong>: バックエンド API（OpenAI, GitHub 等）のみ許可</li>
+        </ul>
+    </section>
+
+    <!-- Section 8 -->
+    <section id="hybrid">
+        <h2>8. ハイブリッド実行モード <a href="#hybrid" class="section-anchor">#</a></h2>
+        <p>
+            ローカルと Web の両方で同じコードを動かすため、実行時にモードを切り替える仕組みが必要です。
+            環境変数と Gateway の検出で自動判定します。
+        </p>
+
+        <h3>8.1 モード検出ロジック</h3>
+        <pre><span class="code-label">python</span><code># src/openshell_ui/core/mode.py
+import os
+from enum import Enum
+
+class RunMode(Enum):
+    LOCAL = "local"       # 開発者マシンで直接実行
+    SANDBOX = "sandbox"   # OpenShell サンドボックス内で実行
+    WEB = "web"           # Gateway 経由で外部公開
+
+def detect_mode() -> RunMode:
+    """実行環境を自動検出"""
+    # OpenShell サンドボックス内では OPENSHELL_SANDBOX_ID が設定される
+    if os.environ.get("OPENSHELL_SANDBOX_ID"):
+        return RunMode.SANDBOX
+    # 明示的に WEB モードが指定されている場合
+    if os.environ.get("OSUI_MODE") == "web":
+        return RunMode.WEB
+    return RunMode.LOCAL
+
+def get_gateway_url(mode: RunMode) -> str | None:
+    """モードに応じた Gateway URL を返す"""
+    if mode == RunMode.SANDBOX:
+        # サンドボックス内からは通常 localhost:18080
+        return os.environ.get("OPENSHELL_GATEWAY", "http://localhost:18080")
+    if mode == RunMode.WEB:
+        return os.environ.get("OSUI_GATEWAY_URL")
+    # LOCAL: active cluster を自動検出
+    return None</code></pre>
+
+        <h3>8.2 モード別起動スクリプト</h3>
+        <pre><span class="code-label">bash</span><code># scripts/run-local.sh
+#!/usr/bin/env bash
+# ローカル開発用
+export OSUI_MODE=local
+export OSUI_DEBUG=true
+uv run python -m openshell_ui.api.main
+
+# scripts/run-web.sh
+#!/usr/bin/env bash
+# Web 公開用（サンドボックス内で実行）
+export OSUI_MODE=web
+export OSUI_HOST=0.0.0.0
+export OSUI_PORT=8080
+uv run python -m openshell_ui.api.main</code></pre>
+    </section>
+
+    <!-- Section 9 -->
+    <section id="deployment">
+        <h2>9. デプロイメント例 <a href="#deployment" class="section-anchor">#</a></h2>
+        <p>
+            以下は、カスタム Sandbox イメージをビルドし、OpenShell 上で UI を公開する完全な例です。
+        </p>
+
+        <h3>9.1 Dockerfile</h3>
+        <pre><span class="code-label">dockerfile</span><code># Dockerfile.ui
+FROM ghcr.io/nvidia/openshell-community/sandboxes/base:latest
+
+WORKDIR /app
+COPY pyproject.toml .
+COPY src/ ./src/
+
+# uv インストール（base イメージに含まれていない場合）
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+# 依存解決
+RUN uv sync
+
+# 起動コマンド
+CMD ["uv", "run", "python", "-m", "openshell_ui.api.main"]</code></pre>
+
+        <h3>9.2 ビルドとデプロイ</h3>
+        <pre><span class="code-label">bash</span><code># イメージビルド
+docker build -t my-openshell-ui:latest -f Dockerfile.ui .
+
+# OpenShell サンドボックスとして起動
+openshell sandbox create --from my-openshell-ui:latest --name ui-prod --env OSUI_MODE=web
+
+# ポート公開
+openshell service expose ui-prod 8080 web
+
+# 確認
+openshell service get ui-prod web</code></pre>
+
+        <h3>9.3 まとめフロー</h3>
+        <table>
+            <thead>
+                <tr><th>フェーズ</th><th>ローカル</th><th>Web</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>開発</td><td><code>uv run</code> で即座に起動</td><td>同じコードをサンドボックス内で実行</td></tr>
+                <tr><td>Gateway</td><td>自動検出 / <code>openshell gateway add</code></td><td>事前に登録済みのリモート Gateway</td></tr>
+                <tr><td>公開</td><td><code>localhost:8080</code></td><td><code>openshell service expose</code></td></tr>
+                <tr><td>認証</td><td>不（ローカル）</td><td>Gateway OIDC / mTLS</td></tr>
+                <tr><td>ポリシー</td><td>最小権限で開発</td><td>本番用 YAML で厳格化</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Section 10 -->
+    <section id="reference">
+        <h2>10. 参考リソース <a href="#reference" class="section-anchor">#</a></h2>
+        <ul>
+            <li><a href="https://github.com/NVIDIA/OpenShell">NVIDIA OpenShell GitHub</a> — ソースコード・Issue 追跡</li>
+            <li><a href="https://docs.nvidia.com/openshell/latest/">OpenShell Developer Guide</a> — 公式ドキュメント</li>
+            <li><a href="https://pypi.org/project/openshell/">openshell PyPI</a> — Python SDK 配布</li>
+            <li><a href="https://fastapi.tiangolo.com/">FastAPI Documentation</a> — Web フレームワーク</li>
+            <li><a href="https://www.gradio.app/docs">Gradio Docs</a> — AI UI コンポーネント</li>
+            <li><a href="https://docs.astral.sh/uv/">uv Documentation</a> — Python パッケージマネージャ</li>
+        </ul>
+    </section>
+
+</main>
+
+<footer>
+    <div class="container">
+        <p>OpenShell UI/UX 統合ガイド &mdash; NVIDIA OpenShell + uv + FastAPI + Gradio</p>
+        <p style="margin-top: 0.5rem; opacity: 0.6;">最終更新: 2026 年 9 月</p>
+    </div>
+</footer>
+
+</body>
+</html>

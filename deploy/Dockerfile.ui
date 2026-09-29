@@ -1,0 +1,22 @@
+ARG BASE_IMAGE=nvcr.io/nvidia/base/ubuntu:24.04
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+ENV PATH="/root/.local/bin:${PATH}"
+ENV OSUI_MODE=web
+ENV OSUI_HOST=0.0.0.0
+ENV OSUI_PORT=8080
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && uv venv \
+    && uv pip install --python /app/.venv/bin/python "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydantic-settings>=2.4" "websockets>=12"
+
+ENV PATH="/app/.venv/bin:${PATH}"
+
+EXPOSE 8080
+
+CMD ["uvicorn", "openshell_ui.main:app", "--host", "0.0.0.0", "--port", "8080"]

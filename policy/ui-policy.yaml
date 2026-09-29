@@ -1,0 +1,54 @@
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /lib64
+    - /etc
+  read_write:
+    - /tmp
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: sandbox
+
+network_policies:
+  nvidia_inference:
+    endpoints:
+      - host: integrate.api.nvidia.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-write
+    binaries:
+      - path: /usr/bin/uv
+
+  pypi_registry:
+    endpoints:
+      - host: pypi.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+        allow_encoded_slash: true
+      - host: files.pythonhosted.org
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/bin/uv
+
+  ui_origin:
+    endpoints:
+      - host: ui.example.com
+        port: 443
+        protocol: websocket
+        enforcement: enforce
+        access: read-write
+    binaries:
+      - path: /usr/bin/python3

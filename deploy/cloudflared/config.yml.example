@@ -1,0 +1,10 @@
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /Users/YOU/.cloudflared/00000000-0000-0000-0000-000000000000.json
+
+ingress:
+  - hostname: ui.example.com
+    service: http://localhost:8080
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+  - service: http_status:404

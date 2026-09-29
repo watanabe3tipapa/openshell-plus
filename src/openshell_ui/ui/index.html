@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenShell UI</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <span class="dot" id="conn-dot" aria-hidden="true"></span>
+      <h1>OpenShell UI</h1>
+      <span class="chip" id="chip-mode">…</span>
+      <span class="chip chip-muted" id="chip-backend">…</span>
+    </div>
+    <p class="tagline">NVIDIA OpenShell のサンドボックスを操作する UI。ローカル・Cloudflare Tunnel・Vercel で同じコードが動きます。</p>
+  </div>
+</header>
+
+<main class="wrap layout">
+  <section class="panel" aria-labelledby="h-list">
+    <div class="panel-head">
+      <h2 id="h-list">サンドボックス</h2>
+      <div class="actions">
+        <label class="inline"><input type="checkbox" id="auto-refresh" checked> 自動更新</label>
+        <button type="button" class="btn btn-ghost" id="btn-refresh">更新</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">名前</th><th scope="col">状態</th><th scope="col">公開</th><th scope="col"></th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="empty" id="empty" hidden>サンドボックスがありません。</p>
+    </div>
+
+    <details class="creator">
+      <summary>新規作成</summary>
+      <form id="form-create" class="form-grid">
+        <label>名前<input name="name" required pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?" maxlength="63" placeholder="demo-agent" autocomplete="off"></label>
+        <label>公開ポート（任意）<input name="service_port" type="number" min="1" max="65535" placeholder="8080"></label>
+        <label>サービス名（任意）<input name="service_name" maxlength="63" placeholder="web"></label>
+        <button type="submit" class="btn">作成</button>
+      </form>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="h-console">
+    <div class="panel-head">
+      <h2 id="h-console">コンソール</h2>
+      <span class="chip chip-muted" id="chip-target">サンドボックス未選択</span>
+    </div>
+    <form id="form-exec" class="exec-form">
+      <input id="cmd" name="command" placeholder="実行するコマンド 例: ls -la" autocomplete="off" spellcheck="false" disabled>
+      <button type="submit" class="btn" id="btn-run" disabled>実行</button>
+    </form>
+    <p class="hint" id="transport-hint">WebSocket でストリーミング受信します。</p>
+    <pre class="console" id="console" tabindex="0" aria-live="polite"><code id="console-body"></code></pre>
+    <div class="panel-foot">
+      <button type="button" class="btn btn-ghost" id="btn-clear">出力をクリア</button>
+      <span class="hint" id="status-line"></span>
+    </div>
+  </section>
+</main>
+
+<section class="wrap" id="auth-panel" hidden>
+  <div class="panel panel-auth">
+    <h2>アクセストークンが必要です</h2>
+    <p class="hint"><code>OSUI_AUTH_TOKEN</code> が設定されています。トークンを入力してください（セッション内のみ保持されます）。</p>
+    <form id="form-auth" class="exec-form">
+      <input type="password" id="token-input" placeholder="Bearer トークン" autocomplete="off">
+      <button type="submit" class="btn">接続</button>
+    </form>
+    <p class="hint" id="auth-error" role="alert"></p>
+  </div>
+</section>
+
+<footer class="wrap foot">
+  <span><a href="/docs">OpenAPI</a></span>
+  <span>WebSocket / SSE / REST</span>
+  <span id="foot-workspace"></span>
+</footer>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

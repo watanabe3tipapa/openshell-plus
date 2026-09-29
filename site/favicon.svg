@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="OpenShell Plus">
+  <rect width="64" height="64" rx="14" fill="#0b0f19"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#76b900" stroke-opacity="0.45" stroke-width="1.5"/>
+  <path d="M32 13 L47 19.5 V32 C47 41 40.5 47.8 32 51 C23.5 47.8 17 41 17 32 V19.5 Z"
+        fill="none" stroke="#76b900" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M25 32.5 L30 37.5 L40 26.5" fill="none" stroke="#76b900" stroke-width="3.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

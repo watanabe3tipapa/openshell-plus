@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenShell Plus — OpenShell をブラウザから操作する UI/UX</title>
+<meta name="description" content="NVIDIA OpenShell のサンドボックス管理・コマンド実行をブラウザから行える FastAPI 製ダッシュボード。ローカル / Cloudflare Tunnel / Vercel / Google Colab に対応。">
+<meta name="theme-color" content="#0b0f19">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenShell Plus — OpenShell をブラウザから操作する UI/UX">
+<meta property="og:description" content="サンドボックスの作成・監視・シェル実行をブラウザだけで。">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="badge">OpenShell UI/UX</span>
+    <h1 class="hero-title">OpenShell Plus</h1>
+    <p class="hero-sub">
+      NVIDIA OpenShell のサンドボックス管理とコマンド実行を、ブラウザだけのダッシュボードに閉じ込めました。
+      ローカル開発、Cloudflare Tunnel、Vercel、Google Colab のどの環境でも同じ UI を使えます。
+    </p>
+    <div class="hero-meta">
+      <span>FastAPI + Vanilla JS</span>
+      <span>WebSocket / SSE</span>
+      <span>Bearer Token 認証</span>
+    </div>
+    <div class="cta">
+      <a class="btn" data-link="dashboard" href="#quickstart">クイックスタート</a>
+      <a class="btn btn-ghost" data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">ソースコード</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="what-is-openshell">
+  <h2>OpenShell とは何か</h2>
+  <p class="lead">
+    <b>NVIDIA OpenShell</b> は、自律的に動作する AI エージェント（agent の集合体）を
+    <b>カーネルレベルの隔離</b>されたサンドボックスで実行するためのオープンソース・ランタイムです。
+    エージェントにはファイル読み書き・パッケージ導入・API 呼び出し・クレデンシャル利用といった
+    能力を与えつつ同時に、<b>あなたのデータ・シークレット・ネットワークへの無制限アクセスは渡さない</b>。
+    何に触れてよいかを policy（宣言的 YAML）で記述し、OpenShell がそれを強制します。
+  </p>
+
+  <h3>なぜ必要なのか</h3>
+  <p>
+    エージェントは「ファイルを読めて、パッケージを入れられて、API を呼えて、鍵を使える」ときに初めて実用的になります。
+    同じアクセスが、そのまま実データ窃取・情報漏えいの経路にもなり得ます。OpenShell はこのトレードオフを
+    <b>能力を保ちつつ、アクセスを明示的に制御する</b>ことで解きます。
+  </p>
+
+  <h3>2 つの軸で統制する</h3>
+  <div class="cards">
+    <div class="card">
+      <h3>カーネルレベルの強制</h3>
+      <p>各エージェントは隔離されたサンドボックス内で動き、カーネルの制御がファイルアクセス・システムコール・ネットワーク接続のたびに policy を強制します。すべての外向き通信は sandbox を出る前に検査されます。</p>
+    </div>
+    <div class="card">
+      <h3>形式検証による policy 変更チェック</h3>
+      <p>policy 変更が承認される<em>前</em>に形式検証を使い、「新しいホストへ鍵付きで到達できる」「新しい API メソッドを呼べる」といったリスクの高い権限拡大を検出します。検出された変更は人手レビューを待ちます。</p>
+    </div>
+  </div>
+
+  <h3>脅威と対策</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>脅威</th><th>制御がない場合</th><th>OpenShell がある場合</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>データ持ち出し</b><br><span class="muted">エージェントがソースコードや社内ファイルを不正な送信先へアップロードする</span></td>
+          <td>そのまま漏れる</td>
+          <td>network policy が承認済みの宛先だけを許可し、それ以外の外向き通信を deny</td>
+        </tr>
+        <tr>
+          <td><b>クレデンシャル窃取</b><br><span class="muted">SSH 鍵やクラウド認証情報をローカルから読む</span></td>
+          <td>そのまま渡る</td>
+          <td>filesystem 制限（Landlock）が宣言済みパス以外へのアクセスを封じる</td>
+        </tr>
+        <tr>
+          <td><b>未承認 API の利用</b><br><span class="muted">未承認のモデルプロバイダへプロンプトやデータを送る</span></td>
+          <td>そのまま送られる</td>
+          <td>provider profile と network policy が、モデル通信を承認済みエンドポイントとバイナリに限定</td>
+        </tr>
+        <tr>
+          <td><b>権限昇格</b><br><span class="muted"><code>sudo</code>、setuid パス、危険なシステムコールを試す</span></td>
+          <td>昇格できる</td>
+          <td>非特権のプロセス identity と seccomp 制限が昇格経路を遮断</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>多層防御（どの層がいつ効くか）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>層</th><th>何を守るか</th><th>反映タイミング</th></tr></thead>
+      <tbody>
+        <tr><td>Filesystem</td><td>許可パス外の読み書きを阻止</td><td>sandbox 作成時に固定（locked）</td></tr>
+        <tr><td>Network</td><td>未承認の外向き接続を遮断</td><td>実行中にホットリロード可</td></tr>
+        <tr><td>Process</td><td>権限昇格と危険なシステムコールを阻止</td><td>sandbox 作成時に固定（locked）</td></tr>
+        <tr><td>Provider credentials</td><td>不透明なクレデンシャル・プレースホルダーを profile 認可エンドポイントでのみ解決します</td><td>attach / rotate / revoke は実行中。新規環境変数はプロセス再生成が必要</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">
+    agent は本物のクレデンシャルを一切見ません。OpenShell が<b>承認済み宛先宛のリクエストにだけ</b>資格情報を付与します。
+  </p>
+
+  <h3>構成要素</h3>
+  <p>
+    OpenShell の中心は <b>gateway</b>（コントロールプレーン）です。sandbox を作ると、compute driver が
+    <b>workload</b> と独立した <b>supervisor</b> を用意し、両者の保護されたチャネルを張って隔離境界を構築します。
+    supervisor が境界を確認したうえで agent を起動し、以後は gateway に policy・クレデンシャル・ログ・対話セッションを要求します。
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>要素</th><th>役割</th></tr></thead>
+      <tbody>
+        <tr><td><b>Gateway</b></td><td>コントロールプレーン。認証し、sandbox の台帳を保持し、policy / 設定の配信・provider の attach・認可・接続の調停を行う</td></tr>
+        <tr><td><b>Compute runtime / driver</b></td><td>sandbox を作成し supervisor と workload を起動し、プライベートチャネルと network fence を構築します。判断は行いません</td></tr>
+        <tr><td><b>Supervisor</b>（信頼側）</td><td>リクエストを policy と照合し、クレデンシャルを供給し、DNS を解決し、承認済み接続を確立する</td></tr>
+        <tr><td><b>Sandbox / workload</b>（非信頼側）</td><td>agent と同じ境界内に居住。プロセスの所有権を持ち、どのプログラムが要求したかを <code>/proc</code> の信頼できる情報から特定し、TCP / DNS を seccomp で捕捉して supervisor へ渡します</td></tr>
+        <tr><td><b>Policy / Provider</b></td><td>agent が触れるもの（ファイル・プロセス・ネットワーク宛先・API・クレデンシャル先）を記述します</td></tr>
+        <tr><td><b>Policy prover</b></td><td>gateway 内で形式検証を実行し、agent 提案のネットワークルールを検査。standalone の <code>openshell-prover</code> として CI でも利用できる</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>ネットワーク要求の流れ</h3>
+  <ol>
+    <li>エージェントが TCP 接続を開き、または DNS 照会を行う</li>
+    <li>sandbox が呼び出し元のプログラムを特定する（<code>/proc</code> の信頼できる観測）</li>
+    <li>要求が Sandbox Protocol 経由で supervisor へ渡る</li>
+    <li>supervisor が policy と照合し、policy が認めるクレデンシャルを付与する</li>
+    <li>許可された場合のみ、supervisor が実際の接続を開いて中継する</li>
+  </ol>
+  <div class="callout callout-accent">
+    <strong>唯一の egress</strong>
+    supervisor への保護されたチャネルが workload の<em>唯一の</em>許可された外向き経路です。外側の fence がそれ以外（サービス、gateway、DNS、他の内部アドレスへの直接接続）をすべて deny します。
+  </div>
+
+  <h3>ランタイムごとの境界の作り方</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ランタイム</th><th>supervisor の配置</th><th>sandbox との通信</th><th>直接 egress の遮断</th></tr></thead>
+      <tbody>
+        <tr><td>Docker</td><td>専用コンテナ</td><td>driver 所有ボリューム上の認証付き Unix socket</td><td>workload コンテナの networking を無効化</td></tr>
+        <tr><td>Podman</td><td>専用コンテナ</td><td>認証付き Unix socket</td><td>workload コンテナの networking を無効化</td></tr>
+        <tr><td>Kubernetes</td><td>専用 pod</td><td>mutual TLS による private service</td><td>NetworkPolicy で supervisor サービスのみ許可</td></tr>
+        <tr><td>VM / MicroVM</td><td>ホスト上のプロセス</td><td>認証付き vsock</td><td>ゲストにネットワークデバイスを与えない</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    supervisor と sandbox は <b>OpenShell Sandbox Protocol</b> で対話します。相互認証された 1 本の HTTP/2 接続が
+    多数の独立したストリームを運びます（制御・DNS・接続ごとの TCP）。compute driver が transport を選びますが
+    （Docker/Podman は Unix socket、Kubernetes は TCP、MicroVM は vsock）、認証とプロトコルの挙動はすべて同一です。
+    接続ごとの独立 backpressure があるため、遅いダウンロードが DNS や exec を塞ぎません。
+  </p>
+
+  <h3>コンポーネント間の認証</h3>
+  <p>
+    gateway だけが資格情報を署名し、<b>すべての資格情報はちょうど 1 つの sandbox のみを指し</b>ます。sandbox の 1 回の実行ごとに
+    gateway が JWT のペアを発行します。
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>接続</th><th>保護の方法</th></tr></thead>
+      <tbody>
+        <tr><td>supervisor → gateway（supervisor 側が dial out）</td><td>gateway JWT。gateway が TLS を有効化していれば TLS 上。supervisor に必要な呼び出し（policy 取得・ログ送信・セッション中継）のみを許可し、他の sandbox を管理できない</td></tr>
+        <tr><td>supervisor → sandbox</td><td>mutual TLS + sandbox JWT。sandbox は gateway の public key しか持たず、トークンを検証できるが<b>生成はできない</b></td></tr>
+        <tr><td>agent → supervisor</td><td>直接接続しない。sandbox が上のチャネルで中継する</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    両方の JWT は sandbox とその 1 回の実行（<b>generation</b>）に束縛されます。sandbox を再起動すると新しい generation になり、
+    新しいトークンと新しい TLS 証明書が発行され、古いものは失効します。supervisor が切断されると sandbox は agent を
+    <b>凍結</b>し、同じ supervisor プロセスだけが再接続して再開できます（有効なクレデンシャルを持つ別 supervisor への乗っ取りは不可）。
+  </p>
+  <p class="muted">
+    結果として、agent 側には盗む価値のあるものがありません。gateway の署名鍵、gateway JWT、provider クレデンシャルは
+    一切 sandbox 側に置かれません。
+  </p>
+
+  <h3>OpenShell に入る（最小手順）</h3>
+  <pre><code># Linux / Apple Silicon の macOS / WSL2（experimental）+ Docker / Podman / ホスト仮想化が必要
+curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+openshell status
+openshell sandbox create --name demo</code></pre>
+  <p>
+    インストーラが CLI とローカル gateway をセットアップします。既定の sandbox イメージは agent 未インストールの最小 Ubuntu です。
+    実際の agent（OpenCode など）を動かす場合は model provider の設定と policy 承認の方法が別途必要です。
+    詳細は <a data-link="docs" href="https://docs.nvidia.com/openshell/latest/" target="_blank" rel="noopener">公式ドキュメント</a> と
+    <a data-link="openshell" href="https://github.com/NVIDIA/OpenShell" target="_blank" rel="noopener">GitHub リポジトリ</a> を参照してください。
+  </p>
+  <div class="callout callout-warning">
+    <strong>ライセンスと位置づけ</strong>
+    OpenShell 本体は Apache License 2.0 のオープンソースです。openshell-plus は<em>非公式</em>の UI/UX レイヤーで、NVIDIA の製品ではありません。データの漏えい・改ざん・消失について、いかなる保証も行っていません。
+  </div>
+</section>
+
+<section>
+  <h2>何ができるか</h2>
+  <p class="lead">
+    OpenShell の sandbox は「隔離された実行環境」です。openshell-plus はそのライフサイクルを HTTP API と
+    WebSocket コンソールにマッピングし、CLI と同じ操作をブラウザの画面から行えるようにします。
+  </p>
+  <div class="cards">
+    <div class="card">
+      <h3>サンドボックス作成</h3>
+      <p>名前と公開ポート（サービス名も任意）を指定して作成。作成後は <code>provisioning</code> → <code>ready</code> の状態を自動追跡します。</p>
+    </div>
+    <div class="card">
+      <h3>一覧と監視</h3>
+      <p>phase を日本語ラベルに変換して表示。<code>running</code> / <code>stopped</code> / <code>failed</code> などの状態を色分けします。</p>
+    </div>
+    <div class="card">
+      <h3>シェルコンソール</h3>
+      <p>WebSocket 経由で stdout / stderr をストリーミング表示します。<code>workdir</code>（作業ディレクトリ）と <code>timeout_seconds</code>（タイムアウト）を指定できます。</p>
+    </div>
+    <div class="card">
+      <h3>サービス URL</h3>
+      <p>作成時に指定した公開ポート（<code>service expose</code> 相当）の URL を API 経由で取得して表示します。</p>
+    </div>
+    <div class="card">
+      <h3>削除</h3>
+      <p>確認ダイアログ付きで削除。UI 側は <code>delete(name, workspace=...)</code> を呼び出して一覧を即時更新します。</p>
+    </div>
+    <div class="card">
+      <h3>Bearer Token 認証</h3>
+      <p><code>OSUI_AUTH_TOKEN</code> を設定すると全 API が保護されます。公開 bind 時はトークンなしの起動を拒否します。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>4 つのデプロイ形態</h2>
+  <p class="lead">同じアプリケーションを、用途に応じて 4 通りの形で公開できます。構成は <code>OSUI_MODE</code> と起動方法だけで切り替わります。</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>形態</th><th>backend</th><th>起動方法</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>ローカル</b></td>
+          <td>OpenShell</td>
+          <td><code>uv run python -m openshell_ui</code> → <code>http://127.0.0.1:8080</code></td>
+          <td>手元の gateway に実接続。ポートフォワード不要。</td>
+        </tr>
+        <tr>
+          <td><b>Cloudflare Tunnel</b></td>
+          <td>OpenShell</td>
+          <td><code>cloudflared tunnel run</code> + WebSocket コンソール</td>
+          <td>手元の gateway を HTTPS で URL 化。トークン必須。</td>
+        </tr>
+        <tr>
+          <td><b>Vercel</b></td>
+          <td>demo</td>
+          <td><code>vercel deploy</code> → HTTPS 自動</td>
+          <td>デモ・UI プレビュー。Vercel から手元の gateway へは到達できないためサンプルデータのみ。</td>
+        </tr>
+        <tr>
+          <td><b>Google Colab</b></td>
+          <td>demo</td>
+          <td>notebook 実行 → <code>serve_kernel_port_as_iframe</code></td>
+          <td>ブラウザだけでデモを確認。GPU ランタイムでも実行可。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout callout-warning">
+    <strong>Quick Tunnel の制約</strong>
+    URL が実行ごとに変わる、SSE 非対応、同時接続数 200 制限があります。本アプリは WebSocket を主経路にしているため通常利用に影響はありませんが、長時間の検証には named tunnel を推奨します。
+  </div>
+</section>
+
+<section>
+  <h2>Google Colab で試す</h2>
+  <p class="lead">
+    リポジトリを clone しなくても、ブラウザだけでデモを動かせます。GPU ランタイムでもそのまま実行できます。
+  </p>
+  <p>
+    <a href="https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener">
+      <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" width="164" height="24">
+    </a>
+  </p>
+  <ul>
+    <li><b>ノートブック</b> <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb" target="_blank" rel="noopener"><code>deploy/colab/openshell_colab.ipynb</code></a> — セルを順に実行すると、パッケージ導入 → demo モードで起動 → ポート待機 → iframe 埋め込みまで一通り動きます。</li>
+    <li><b>公開トンネルは使いません。</b> Colab の FAQ は、インタラクティブな計算と無関係な Web サービス提供、および無料枠での「ノートブック UI を迂回して Web UI を主眼として操作すること」およびリモートプロキシへの接続を禁じています。恒久トンネルは VM リセットで切れ、アイドルでランタイムも終了します。</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>構成図</h2>
+  <p class="lead">
+    ブラウザ → FastAPI → backend → OpenShell gateway → 隔離境界という操作の流れと、
+    supervisor と sandbox の分界を 1 枚にまとめたものです（下の図はインタラクティブに操作できます:
+    クリックで選択、テーマ切替、拡大縮小、PNG / SVG 書き出しに対応）。
+  </p>
+  <p class="diagram-actions">
+    <a class="btn btn-ghost" href="./diagrams/openshell-plus-architecture.html" target="_blank" rel="noopener">全画面で開く</a>
+  </p>
+  <div class="diagram-frame">
+    <iframe
+      src="./diagrams/openshell-plus-architecture.html"
+      title="openshell-plus 構成図"
+      loading="lazy"
+      referrerpolicy="no-referrer"></iframe>
+  </div>
+  <div class="flow">
+    <div class="node"><b>ブラウザ</b><span>Vanilla JS ダッシュボード</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>FastAPI</b><span>REST / WebSocket / SSE</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>Backend</b><span>OpenShell SDK または demo</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>OpenShell</b><span>gateway → sandbox</span></div>
+  </div>
+  <p>
+    <code>core/factory.py</code> が起動時に gateway へ <code>health</code> で接続を試み、到達できなければ demo backend にフォールバックします。
+    Vercel や Colab のように実 gateway に到達できない環境でも、demo backend にフォールバックすることで、UI が落ちないようにするための設計です。
+  </p>
+</section>
+
+<section id="quickstart">
+  <h2>クイックスタート（ローカル）</h2>
+  <pre><code>git clone https://github.com/watanabe3tipapa/openshell-plus.git
+cd openshell-plus
+uv sync --all-extras
+
+# OpenShell CLI が未導入の場合
+curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+openshell status
+
+# 実際に gateway へ接続する場合
+export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
+./scripts/run-local.sh
+# → http://127.0.0.1:8080</code></pre>
+  <div class="callout callout-accent">
+    <strong>gateway が見つからない場合</strong>
+    <code>openshell status</code> で endpoint を確認してください。パッケージの既定 TLS ポートは <code>17670</code> です（gateway ごとに異なる場合があります）。接続に失敗すると自動的に demo mode へ切り替わり、サンプルデータが操作できます。失敗として扱いたい場合は <code>OSUI_REQUIRE_GATEWAY=true</code> を指定します。
+  </div>
+</section>
+
+<section>
+  <h2>環境変数</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>変数</th><th>既定値</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td><code>OSUI_AUTH_TOKEN</code></td><td>（任意）</td><td>設定すると全 API およびコンソールが保護されます。公開 bind 時は必須。</td></tr>
+        <tr><td><code>OSUI_HOST</code> / <code>OSUI_PORT</code></td><td><code>127.0.0.1</code> / <code>8080</code></td><td>バインド先。loopback 以外は token が必須。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_ENDPOINT</code></td><td>（SDK 自動検出）</td><td>明示的に gateway を指定する場合に使用。空なら active cluster を読みます。</td></tr>
+        <tr><td><code>OSUI_WORKSPACE</code></td><td><code>default</code></td><td>操作対象ワークスペース。</td></tr>
+        <tr><td><code>OSUI_DEMO</code></td><td><code>false</code></td><td><code>true</code> で demo backend を強制。Vercel / Colab 向け。</td></tr>
+        <tr><td><code>OSUI_REQUIRE_GATEWAY</code></td><td><code>false</code></td><td><code>true</code> で demo フォールバックを禁止し、接続できなければ起動を失敗させます。</td></tr>
+        <tr><td><code>OSUI_SSE_ENABLED</code></td><td><code>true</code></td><td>SSE エンドポイントを公開するか。Cloudflare Quick Tunnel では <code>false</code> を推奨。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_CA_CERT</code> / <code>OSUI_GATEWAY_CERT</code> / <code>OSUI_GATEWAY_KEY</code></td><td>（任意）</td><td>CA 検証と mTLS クライアント証明書。<code>CERT</code> と <code>KEY</code> は同時指定が必須。</td></tr>
+        <tr><td><code>OSUI_OIDC_ISSUER</code> / <code>OSUI_OIDC_CLIENT_ID</code> / <code>OSUI_OIDC_CLIENT_SECRET</code> / <code>OSUI_OIDC_AUDIENCE</code></td><td>（任意）</td><td>OIDC クライアント認証。リモート gateway へ接続する際に使用します。</td></tr>
+        <tr><td><code>OSUI_EXEC_DEFAULT_TIMEOUT</code> / <code>OSUI_EXEC_MAX_TIMEOUT</code></td><td><code>60</code> / <code>1800</code></td><td>コマンド実行の既定／上限タイムアウト（秒）。</td></tr>
+        <tr><td><code>OSUI_PAGE_SIZE</code></td><td><code>100</code></td><td>一覧取得時のページサイズ。</td></tr>
+        <tr><td><code>OSUI_CORS_ORIGINS</code></td><td><code>[]</code></td><td>CORS 許可オリジンの JSON 配列。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_CLUSTER</code></td><td>（任意）</td><td>接続先 cluster 名。SDK 側の上書き。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>ガイドの訂正点（実 API との差分）</h2>
+  <p class="lead">ガイドの擬似コードがそのまま実装できなかった箇所を、実 SDK の仕様に合わせて整理しました。コードを書くときの注意点は以下です。</p>
+  <ul>
+    <li><code>SandboxSession(client, sandbox_id)</code> は存在しません。<code>client.create(...)</code> が <code>SandboxRef</code> を返します。</li>
+    <li>get / list / delete / exec は <code>name</code> と <code>workspace</code> で識別します。UUID 直接指定は不可。</li>
+    <li><code>status.phase</code> は文字列ではなく enum（int）。UI 側で <code>phase_label()</code> に渡して日本語へ変換します。</li>
+    <li>イメージは <code>--from</code> で明示します。既定値は <code>nvcr.io/nvidia/base/ubuntu:24.04</code>。</li>
+    <li>サービス公開は <code>service expose &lt;name&gt; &lt;port&gt; [service]</code>。削除は <code>service delete</code> です（<code>unexpose</code> ではない）。</li>
+    <li>ローカルアクセスには <code>openshell forward start 8000 my-sandbox</code> が使えます。tunnel 不要で localhost へフォワードできます。</li>
+    <li>provider プロファイルは <code>openshell profile import --url &lt;URL&gt;</code> で投入します。<code>inference set</code> のようなコマンドは存在しません。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>セキュリティ</h2>
+  <ul>
+    <li>loopback 以外の bind ではトークンを必須とし、起動時に検証します。</li>
+    <li>token は <code>Authorization: Bearer</code>、<code>Sec-WebSocket-Protocol: bearer.*</code>、<code>?token=</code> の 3 経路を受け付けます（WebSocket はヘッダ制約のため <code>bearer.*</code> を使用）。</li>
+    <li>mTLS と OIDC は gateway の要件に合わせて個別に有効化します。非 loopback gateway では TLS 必須です。</li>
+    <li>静的アセットは token なしで配信されます。機密情報は含まれません。</li>
+    <li>Colab からの公開トンネル接続はデフォルトで無効（ポリシー違反のため）。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>リポジトリ構成</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>パス</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/openshell_ui/core/</code></td><td>設定、モード判定、backend factory、OpenShell / demo adapter</td></tr>
+        <tr><td><code>src/openshell_ui/api/</code></td><td>auth、health/config、CRUD、exec（REST / WebSocket / SSE）</td></tr>
+        <tr><td><code>src/openshell_ui/ui/</code></td><td>同梱のダッシュボード（HTML / CSS / JS）</td></tr>
+        <tr><td><code>deploy/</code></td><td>Cloudflare config、Dockerfile、Colab notebook</td></tr>
+        <tr><td><code>policy/</code></td><td>OpenShell policy（version 1）</td></tr>
+        <tr><td><code>site/</code></td><td>この LP（GitHub Pages）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a> ·
+      <a data-link="openshell" href="https://github.com/NVIDIA/OpenShell" target="_blank" rel="noopener">NVIDIA OpenShell</a> ·
+      <a data-link="docs" href="https://docs.nvidia.com/openshell/latest/" target="_blank" rel="noopener">ドキュメント</a> ·
+      <a data-link="sdk" href="https://pypi.org/project/openshell/" target="_blank" rel="noopener">PyPI</a>
+    </p>
+    <p>Built with FastAPI · Vanilla JS · OpenShell SDK</p>
+  </div>
+</footer>
+
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
