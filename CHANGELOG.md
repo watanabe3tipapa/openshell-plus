@@ -5,6 +5,25 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-11
+
+### Added
+
+- LP に操作デモ GIF（`site/screenshots/demo.gif`）を追加。サンドボックス作成 → 一覧反映 →
+  コンソールでのコマンド実行を録画（demo backend、約 9 秒）
+- LP を 3 ページに分割。`site/index.html`（概要）/ `site/reference.html`（環境変数・
+  API 差分・エラー対処・リポジトリ構成）/ `site/security.html`（認証方式・mTLS/OIDC・
+  公開前チェックリスト）
+- サイト共通ナビゲーション（現在地を `aria-current` で表示）と、各ページの目次を追加
+
+### Changed
+
+- README / README_en のドキュメント一覧を 3 ページ構成に更新
+
+### Fixed
+
+- `USAGE.md` の誤字・混入文字を修正（「各省」→「各所」、「緩めた量为」→「緩めた分が」）
+
 ## [0.1.2] - 2026-10-11
 
 ### Added
@@ -57,7 +76,8 @@
 - デプロイ資産（Cloudflare Tunnel / Vercel / Colab / Dockerfile）と GitHub Pages LP
 - OpenShell policy（`policy/ui-policy.yaml`）とドキュメント訂正ツール（README §差分）
 
-[Unreleased]: https://github.com/watanabe3tipapa/openshell-plus/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/watanabe3tipapa/openshell-plus/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/watanabe3tipapa/openshell-plus/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/watanabe3tipapa/openshell-plus/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/watanabe3tipapa/openshell-plus/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/watanabe3tipapa/openshell-plus/releases/tag/v0.1.0

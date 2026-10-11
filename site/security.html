@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>セキュリティ — OpenShell Plus</title>
+<meta name="description" content="OpenShell Plus の認証方式（Bearer / WebSocket subprotocol / query token の既定無効）、mTLS・OIDC、公開前チェックリスト、データ取り扱いの注意。">
+<link rel="canonical" href="https://watanabe3tipapa.github.io/openshell-plus/security.html">
+<meta name="theme-color" content="#ffffff">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="OpenShell Plus">
+<meta property="og:url" content="https://watanabe3tipapa.github.io/openshell-plus/security.html">
+<meta property="og:title" content="セキュリティ — OpenShell Plus">
+<meta property="og:description" content="認証方式・mTLS/OIDC・公開前チェックリスト。">
+<meta property="og:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenShell Plus — OpenShell を、ブラウザから。">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="セキュリティ — OpenShell Plus">
+<meta name="twitter:description" content="認証方式・mTLS/OIDC・公開前チェックリスト。">
+<meta name="twitter:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">本文へスキップ</a>
+
+<nav class="site-nav" aria-label="サイト内ナビゲーション">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./index.html">OpenShell Plus</a>
+    <a href="./index.html">概要</a>
+    <a href="./reference.html">リファレンス</a>
+    <a href="./security.html" aria-current="page">セキュリティ</a>
+    <span class="nav-spacer"></span>
+    <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/README_en.md" target="_blank" rel="noopener">EN</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <span class="badge">Security</span>
+    <h1 class="page-title">セキュリティ</h1>
+    <p class="page-sub">
+      openshell-plus は OpenShell gateway をブラウザから操作するための<em>非公式</em> UI です。
+      公開範囲に応じてトークン認証を必須にし、URL へのトークン露出を避ける設計にしています。
+      環境変数の一覧は <a href="./reference.html#env">リファレンス</a> を参照してください。
+    </p>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次（このページ）</p>
+  <ol>
+    <li><a href="#policy">方針</a></li>
+    <li><a href="#auth">認証方式</a></li>
+    <li><a href="#checklist">公開前チェックリスト</a></li>
+    <li><a href="#limits">既知の制約と免責</a></li>
+  </ol>
+</nav>
+
+<section id="policy">
+  <h2>方針</h2>
+  <ul>
+    <li>loopback 以外の bind ではトークンを必須とし、起動時に検証します（未設定なら <code>SettingsError</code> で起動を拒否）。</li>
+    <li>トークンは <code>Authorization: Bearer</code> と WebSocket の <code>Sec-WebSocket-Protocol: bearer.*</code> を受け付けます。<b>URL クエリの <code>?token=</code> は既定で拒否</b>します（<code>OSUI_ALLOW_QUERY_TOKEN=true</code> で明示的に許可した場合のみ。URL はアクセスログ・ブラウザ履歴・Referer に残るため非推奨）。</li>
+    <li>mTLS と OIDC は gateway の要件に合わせて個別に有効化します。非 loopback gateway では TLS 必須です。</li>
+    <li>静的アセット（HTML / CSS / JS）はトークンなしで配信されます。機密情報は含まれません。</li>
+    <li>Colab からの公開トンネル接続はデフォルトで無効（Colab の利用ポリシーに抵触するため）。</li>
+    <li>demo backend で起動した場合は UI 上部に常時「DEMO MODE」バナーを表示し、実データと区別できます。</li>
+  </ul>
+</section>
+
+<section id="auth">
+  <h2>認証方式</h2>
+  <p class="lead"><code>OSUI_AUTH_TOKEN</code> を設定すると、すべての <code>/api/*</code> と WebSocket ハンドシェイクが保護されます。クライアントからトークンを渡す方法は次の 3 つです。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>方式</th><th>用途</th><th>既定</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization: Bearer &lt;token&gt;</code></td><td>REST / SSE。CLI・スクリプト・通常の fetch から利用</td><td>有効</td></tr>
+        <tr><td><code>Sec-WebSocket-Protocol: bearer.&lt;token&gt;</code></td><td>WebSocket。ブラウザは WS に独自ヘッダを付けられないため、同梱 UI もこの方式を使用</td><td>有効</td></tr>
+        <tr><td><code>?token=&lt;token&gt;</code>（クエリ）</td><td>ヘッダを付けられない旧来のクライアント向けの互換手段</td><td><b>無効</b>（<code>OSUI_ALLOW_QUERY_TOKEN=true</code> で有効化）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout callout-warning">
+    <strong>なぜクエリトークンを既定で無効にしているか</strong>
+    URL に含めたトークンは、リバースプロキシのアクセスログ、ブラウザの履歴やオートコンプリート、
+    他サイトへ遷移する際の <code>Referer</code> ヘッダなど、保護されない場所に残ります。
+    同梱 UI は subprotocol 方式に移行済みのため、通常はクエリ方式を有効にする必要はありません。
+  </div>
+
+  <h3>リモート gateway への接続（mTLS / OIDC）</h3>
+  <ul>
+    <li>クライアント証明書を使う場合は <code>OSUI_GATEWAY_CERT</code> と <code>OSUI_GATEWAY_KEY</code> を同時に指定します（片方だけの指定は起動時に拒否）。CA 検証は <code>OSUI_GATEWAY_CA_CERT</code> で行います。</li>
+    <li>OIDC クライアント認証は <code>OSUI_OIDC_ISSUER</code>・<code>OSUI_OIDC_CLIENT_ID</code>・<code>OSUI_OIDC_CLIENT_SECRET</code>・<code>OSUI_OIDC_AUDIENCE</code> で設定します。<code>OSUI_OIDC_CLIENT_SECRET</code> は <code>OSUI_OIDC_ISSUER</code> を、<code>OSUI_OIDC_ISSUER</code> は <code>OSUI_OIDC_CLIENT_ID</code> を要求します。</li>
+  </ul>
+</section>
+
+<section id="checklist">
+  <h2>公開前チェックリスト</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>項目</th><th>確認方法</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>トークンを設定した</td><td><code>OSUI_AUTH_TOKEN</code> に十分長いランダム値を設定</td></tr>
+        <tr><td>2</td><td>公開 bind を理解している</td><td><code>OSUI_HOST</code> を loopback 以外にする場合、トークン未設定では起動しないことを確認</td></tr>
+        <tr><td>3</td><td><code>?token=</code> を有効にしていない</td><td><code>OSUI_ALLOW_QUERY_TOKEN</code> が未設定（<code>false</code>）であること</td></tr>
+        <tr><td>4</td><td>gateway への接続が TLS</td><td>非 loopback gateway へは mTLS / OIDC / TLS を使用</td></tr>
+        <tr><td>5</td><td>demo のまま公開していない</td><td>実 gateway に接続できない環境で公開する場合、demo backend である旨を利用者へ明示（UI の DEMO MODE バナー）</td></tr>
+        <tr><td>6</td><td>信頼境界を確認した</td><td>リバースプロキシ・トンネル越しにアクセスログへトークンが残らない構成か</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="limits">
+  <h2>既知の制約と免責</h2>
+  <ul>
+    <li>本プロジェクトは OpenShell 本体（Apache License 2.0）の<em>非公式</em> UI レイヤーであり、NVIDIA の製品ではありません。</li>
+    <li>データの漏えい・改ざん・消失について、いかなる保証も行いません。重要な環境では gateway 側の policy とネットワーク境界を併せて設定してください。</li>
+    <li>WebSocket ハンドシェイクで <code>Sec-WebSocket-Protocol</code> に複数の値が並ぶ場合、トークンの位置によっては echo する subprotocol がずれる可能性があります（<a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/DEV-MEMO.md">DEV-MEMO.md</a> に記録）。</li>
+    <li>エラーコードと対処は <a href="./reference.html#errors">リファレンスの「エラーと対処」</a> を参照してください。</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <a href="./index.html">概要</a> ·
+      <a href="./reference.html">リファレンス</a> ·
+      <a href="./security.html">セキュリティ</a> ·
+      <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a> ·
+      <a data-link="openshell" href="https://github.com/NVIDIA/OpenShell" target="_blank" rel="noopener">NVIDIA OpenShell</a> ·
+      <a data-link="docs" href="https://docs.nvidia.com/openshell/latest/" target="_blank" rel="noopener">ドキュメント</a> ·
+      <a data-link="sdk" href="https://pypi.org/project/openshell/" target="_blank" rel="noopener">PyPI</a> ·
+      <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/README_en.md" target="_blank" rel="noopener">English</a>
+    </p>
+    <p>Built with FastAPI · Vanilla JS · OpenShell SDK</p>
+  </div>
+</footer>
+
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

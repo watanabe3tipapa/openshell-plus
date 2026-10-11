@@ -397,6 +397,57 @@ Markdown リンク / アンカーは 13 件すべて正常。ノートブック�
 ### 残課題
 
 - デモ GIF（10〜15 秒の操作動画）は撮影環境の都合上、今回は静止画 1 枚のみ。
-  インタラクション動画は将来の作業に残す。
+  インタラクション動画は将来の作業に残す。 → **Phase 8 で対応済み**
 - LP のページ分割（Getting Started / Reference / Security）は今回実施せず。
-  固定ナビ + TOC で対応し、必要になったら再検討する。
+  固定ナビ + TOC で対応し、必要になったら再検討する。 → **Phase 8 で対応済み**
+
+---
+
+## Phase 8: 残タスク（デモ GIF・LP 分割）と v0.1.3（2026-10-11）
+
+### 1. 操作デモ GIF
+
+- demo backend（`OSUI_DEMO=true`）を起動し、Playwright（`playwright-core` + システム Chrome、
+  `channel: "chrome"`）で 1280x800 の画面をスクリーンショット連写（約 10 fps、93 フレーム）。
+- シナリオ: 新規作成フォーム展開 → `demo-agent` 入力 → 作成 → 一覧反映 → `ls -la` 実行 →
+  `python --version` 実行。各コマンドは `#console-body` に `exit 0` が出るまで待機して録画。
+- ffmpeg の `palettegen` / `paletteuse`（`max_colors=128`, `stats_mode=diff`）で
+  960x600 の GIF に変換（`site/screenshots/demo.gif`, 142 KB, 約 9 秒）。
+- フレームは ImageMagick で「非空（stddev > 4000, 数千色）」「フレーム間差分あり（RMSE 3〜4%）」
+  を確認。画像そのものは目視できないため、DOM の `waitForFunction` とフレーム統計で代替検証した。
+
+### 2. LP の 3 ページ分割
+
+- `site/index.html`（概要）／`site/reference.html`（環境変数・API 差分・エラー・構成）／
+  `site/security.html`（認証方式・公開前チェックリスト・免責）に分割。
+- 共通のサイトナビ（ブランド / 概要 / リファレンス / セキュリティ / GitHub / EN）を各ページに設置し、
+  現在地を `aria-current="page"` で表示。各ページに個別の目次（TOC）を用意した。
+- 追加 CSS: `.nav-brand` / `.nav-spacer` / `.page-head` / `.page-title` / `.page-sub` /
+  `.read-next` / `.toc-more`。index 末尾に「続きを読む」カードで reference / security へ誘導。
+- 内部リンク・アンカーは自作チェッカーで全件検証（欠損ゼロ）。ヘッドレス Chrome で 3 ページを読み込み、
+  コンソールエラー・横スクロール・壊れた画像なしを確認（`dashboard.png` の未ロードは `loading="lazy"`
+  の初期状態で、スクロール時は HTTP 200 / 2880px で正常に読めることを別途確認）。
+
+### 3. タイポ再点検（v0.1.3 前）
+
+- `cspell`（日本語は除外、技術用語辞書を付与）で英語を検査。ヒットは全て技術用語・固有名詞
+  （Referer / Archify / Virtio / KASLR / KPTI / syscall / Supabase / setuid / backpressure / nvcr /
+  unexpose）で、実誤字はなし。`pyright` の出力 `0 informations` は**本物の出力文字列**のため据え置き。
+- Python で簡体字（日本語では使わない字）を全ドキュメント走査し、`USAGE.md` の混入を検出:
+  - 「各省」→「各所」
+  - 「緩めた量为」→「緩めた分が」（`为` は簡体字の混入）
+- `site/security.html` の OIDC 変数名の省略表記とチェックリストの文を明確化。
+
+### 品質ゲート（v0.1.3 時点）
+
+| ゲート | 結果 |
+|---|---|
+| `uv run pytest` | 153 passed |
+| `uv run ruff check .` | All checks passed |
+| `uv run ruff format --check .` | 36 files already formatted |
+| `uv run pyright` | 0 errors, 0 warnings, 0 informations |
+
+### 残課題（Phase 8 以降）
+
+- デモ GIF は静止操作のみ。入力ミスやエラー表示などの「失敗系」の動画は未作成。
+- LP の多言語化（英語ページ）は未実施。README_en へのリンクのみ。

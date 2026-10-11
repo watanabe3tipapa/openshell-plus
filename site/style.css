@@ -366,6 +366,45 @@ footer a { margin: 0 0.35rem; }
   font-weight: 700;
 }
 .site-nav a:hover { background: var(--accent); border-bottom-color: var(--border); }
+.site-nav a.nav-brand {
+  font-size: var(--step-0);
+  margin-right: 10px;
+  padding-left: 0;
+}
+.site-nav a.nav-brand::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  vertical-align: 0;
+  background: var(--accent);
+  border: 2px solid var(--border);
+}
+.site-nav a[aria-current="page"] {
+  border-bottom-color: var(--border);
+  background: var(--muted);
+}
+.nav-spacer { flex: 1 1 auto; }
+
+/* ---- サブページのヘッダー ---- */
+.page-head { padding-top: 4px; }
+.page-title {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 5px 14px;
+  border: 3px solid var(--border);
+  background: var(--bg);
+  border-radius: 2px;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.page-sub { font-size: var(--step-0); max-width: 64ch; margin: 0; }
+
+/* ---- 続きを読む ---- */
+.read-next h2 { margin-top: 8px; }
+.read-next .card a { border-bottom-width: 3px; }
 
 /* ---- 目次 ---- */
 .toc {
@@ -387,6 +426,13 @@ footer a { margin: 0 0.35rem; }
 }
 .toc a { border: 0; padding: 0; }
 .toc a:hover { background: var(--accent); }
+.toc-more {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 2px dashed var(--border);
+  font-size: var(--step--2);
+  color: var(--ink-soft);
+}
 
 /* ---- スクリーンショット ---- */
 .screenshots { margin: 1.2rem 0; }

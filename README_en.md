@@ -5,7 +5,7 @@
 openshell-plus is a web UI/UX for [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) that moves sandbox management and command execution into a single browser dashboard. One FastAPI + Vanilla JS application runs unchanged on local, Cloudflare Tunnel, Vercel, and Google Colab.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.1.2-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
+[![Version](https://img.shields.io/badge/version-v0.1.3-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
 [![CI](https://img.shields.io/github/actions/workflow/status/watanabe3tipapa/openshell-plus/test.yml?label=CI)](https://github.com/watanabe3tipapa/openshell-plus/actions)
@@ -483,7 +483,9 @@ See `.env.example` for the full list.
 
 For newcomers, reading in this order gives you the full picture.
 
-1. [Live site](https://watanabe3tipapa.github.io/openshell-plus/) — features, deployment targets, environment variables
+1. [Live site](https://watanabe3tipapa.github.io/openshell-plus/) — overview, features, deployment targets, demo
+   - [Reference](https://watanabe3tipapa.github.io/openshell-plus/reference.html) — environment variables, API diff, errors, repo layout
+   - [Security](https://watanabe3tipapa.github.io/openshell-plus/security.html) — auth methods, mTLS/OIDC, pre-deploy checklist
 2. `README.md` (Japanese) — concept and operations
 3. `USAGE.md` (Japanese) — recipes by goal, constraints, troubleshooting
 4. `openshell-uiux-guide.html` — the original UI/UX guide (pseudocode; the real SDK diff is summarised in the "A Corrector for Stale Docs" section)

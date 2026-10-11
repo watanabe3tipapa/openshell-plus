@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リファレンス — OpenShell Plus</title>
+<meta name="description" content="OpenShell Plus の環境変数一覧、ガイドの擬似コードと実 SDK の差分、主要エラーと対処、リポジトリ構成をまとめたリファレンス。">
+<link rel="canonical" href="https://watanabe3tipapa.github.io/openshell-plus/reference.html">
+<meta name="theme-color" content="#ffffff">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="OpenShell Plus">
+<meta property="og:url" content="https://watanabe3tipapa.github.io/openshell-plus/reference.html">
+<meta property="og:title" content="リファレンス — OpenShell Plus">
+<meta property="og:description" content="環境変数・API 差分・エラー対処・リポジトリ構成。">
+<meta property="og:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenShell Plus — OpenShell を、ブラウザから。">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="リファレンス — OpenShell Plus">
+<meta name="twitter:description" content="環境変数・API 差分・エラー対処・リポジトリ構成。">
+<meta name="twitter:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">本文へスキップ</a>
+
+<nav class="site-nav" aria-label="サイト内ナビゲーション">
+  <div class="nav-inner">
+    <a class="nav-brand" href="./index.html">OpenShell Plus</a>
+    <a href="./index.html">概要</a>
+    <a href="./reference.html" aria-current="page">リファレンス</a>
+    <a href="./security.html">セキュリティ</a>
+    <span class="nav-spacer"></span>
+    <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/README_en.md" target="_blank" rel="noopener">EN</a>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <span class="badge">Reference</span>
+    <h1 class="page-title">リファレンス</h1>
+    <p class="page-sub">
+      環境変数、ガイドの擬似コードと実 SDK の差分、主要なエラーと対処、リポジトリ構成をまとめています。
+      はじめての場合は先に <a href="./index.html">概要</a> を読んでください。
+    </p>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次（このページ）</p>
+  <ol>
+    <li><a href="#env">環境変数</a></li>
+    <li><a href="#corrections">ガイドの訂正点（実 API との差分）</a></li>
+    <li><a href="#errors">エラーと対処</a></li>
+    <li><a href="#structure">リポジトリ構成</a></li>
+  </ol>
+</nav>
+
+<section id="env">
+  <h2>環境変数</h2>
+  <p class="lead">すべて <code>OSUI_</code> 接頭辞で、<code>.env</code> からも読み込めます。認証に関わる項目の背景は <a href="./security.html">セキュリティ</a> を参照してください。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>変数</th><th>既定値</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td><code>OSUI_AUTH_TOKEN</code></td><td>（任意）</td><td>設定すると全 API およびコンソールが保護されます。公開 bind 時は必須。</td></tr>
+        <tr><td><code>OSUI_HOST</code> / <code>OSUI_PORT</code></td><td><code>127.0.0.1</code> / <code>8080</code></td><td>バインド先。loopback 以外は token が必須。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_ENDPOINT</code></td><td>（SDK 自動検出）</td><td>明示的に gateway を指定する場合に使用。空なら active cluster を読みます。</td></tr>
+        <tr><td><code>OSUI_WORKSPACE</code></td><td><code>default</code></td><td>操作対象ワークスペース。</td></tr>
+        <tr><td><code>OSUI_DEMO</code></td><td><code>false</code></td><td><code>true</code> で demo backend を強制。Vercel / Colab 向け。</td></tr>
+        <tr><td><code>OSUI_ALLOW_QUERY_TOKEN</code></td><td><code>false</code></td><td><code>?token=</code> での認証を許可するか。URL はログ・履歴・Referer に残るため既定で無効。</td></tr>
+        <tr><td><code>OSUI_REQUIRE_GATEWAY</code></td><td><code>false</code></td><td><code>true</code> で demo フォールバックを禁止し、接続できなければ起動を失敗させます。</td></tr>
+        <tr><td><code>OSUI_SSE_ENABLED</code></td><td><code>true</code></td><td>SSE エンドポイントを公開するか。Cloudflare Quick Tunnel では <code>false</code> を推奨。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_CA_CERT</code> / <code>OSUI_GATEWAY_CERT</code> / <code>OSUI_GATEWAY_KEY</code></td><td>（任意）</td><td>CA 検証と mTLS クライアント証明書。<code>CERT</code> と <code>KEY</code> は同時指定が必須。</td></tr>
+        <tr><td><code>OSUI_OIDC_ISSUER</code> / <code>OSUI_OIDC_CLIENT_ID</code> / <code>OSUI_OIDC_CLIENT_SECRET</code> / <code>OSUI_OIDC_AUDIENCE</code></td><td>（任意）</td><td>OIDC クライアント認証。リモート gateway へ接続する際に使用します。</td></tr>
+        <tr><td><code>OSUI_EXEC_DEFAULT_TIMEOUT</code> / <code>OSUI_EXEC_MAX_TIMEOUT</code></td><td><code>60</code> / <code>1800</code></td><td>コマンド実行の既定／上限タイムアウト（秒）。</td></tr>
+        <tr><td><code>OSUI_PAGE_SIZE</code></td><td><code>100</code></td><td>一覧取得時のページサイズ。</td></tr>
+        <tr><td><code>OSUI_CORS_ORIGINS</code></td><td><code>[]</code></td><td>CORS 許可オリジンの JSON 配列。</td></tr>
+        <tr><td><code>OSUI_GATEWAY_CLUSTER</code></td><td>（任意）</td><td>接続先 cluster 名。SDK 側の上書き。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="corrections">
+  <h2>ガイドの訂正点（実 API との差分）</h2>
+  <p class="lead">ガイドの擬似コードがそのまま実装できなかった箇所を、実 SDK の仕様に合わせて整理しました。コードを書くときの注意点は以下です。</p>
+  <ul>
+    <li><code>SandboxSession(client, sandbox_id)</code> は存在しません。<code>client.create(...)</code> が <code>SandboxRef</code> を返します。</li>
+    <li>get / list / delete / exec は <code>name</code> と <code>workspace</code> で識別します。UUID 直接指定は不可。</li>
+    <li><code>status.phase</code> は文字列ではなく enum（int）。UI 側で <code>phase_label()</code> に渡して日本語へ変換します。</li>
+    <li>イメージは <code>--from</code> で明示します。既定値は <code>nvcr.io/nvidia/base/ubuntu:24.04</code>。</li>
+    <li>サービス公開は <code>service expose &lt;name&gt; &lt;port&gt; [service]</code>。削除は <code>service delete</code> です（<code>unexpose</code> ではない）。</li>
+    <li>ローカルアクセスには <code>openshell forward start 8000 my-sandbox</code> が使えます。tunnel 不要で localhost へフォワードできます。</li>
+    <li>provider プロファイルは <code>openshell profile import --url &lt;URL&gt;</code> で投入します。<code>inference set</code> のようなコマンドは存在しません。</li>
+  </ul>
+</section>
+
+<section id="errors">
+  <h2>エラーと対処</h2>
+  <p class="lead">主要なエラーが返る状況と、UI 上での挙動・対処法です。トースト通知など UI 上のメッセージはコンソールにも出力されます。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>状態</th><th>発生する場面</th><th>UI 上の挙動</th><th>対処</th></tr></thead>
+      <tbody>
+        <tr><td><code>401</code></td><td>トークン未設定・不一致（<code>Authorization</code> / <code>Sec-WebSocket-Protocol</code> / <code>?token=</code>）</td><td>アクセストークン入力パネルを表示</td><td><code>OSUI_AUTH_TOKEN</code> と同じ値を入力</td></tr>
+        <tr><td><code>404</code></td><td>存在しないサンドボックス、または SSE 無効化時の <code>/exec/stream</code></td><td>コンソールに <code>[error] not found</code> を出力</td><td>一覧から正しい名前を選択</td></tr>
+        <tr><td><code>422</code></td><td>未実装フィールド（<code>env</code> 等）や不正なペイロード</td><td>422 の詳細をコンソールに出力</td><td>サポート対象のフィールドのみ送信</td></tr>
+        <tr><td><code>503</code></td><td><code>OSUI_REQUIRE_GATEWAY=true</code> で gateway に到達できない</td><td>起動に失敗（fail-fast）</td><td>gateway の起動・endpoint を確認</td></tr>
+        <tr><td><code>4401</code>（WS）</td><td>WebSocket ハンドシェイク時の token 失敗</td><td>接続切断・再実行可能</td><td>トークンを確認して再接続</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">
+    起動経路の失敗（README / LP の手順どおりでない条件）の詳細は
+    <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/USAGE.md">USAGE.md</a> のトラブルシューティングも参照してください。
+  </p>
+</section>
+
+<section id="structure">
+  <h2>リポジトリ構成</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>パス</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/openshell_ui/core/</code></td><td>設定、モード判定、backend factory、OpenShell / demo adapter</td></tr>
+        <tr><td><code>src/openshell_ui/api/</code></td><td>auth、health/config、CRUD、exec（REST / WebSocket / SSE）</td></tr>
+        <tr><td><code>src/openshell_ui/ui/</code></td><td>同梱のダッシュボード（HTML / CSS / JS）</td></tr>
+        <tr><td><code>deploy/</code></td><td>Cloudflare config、Dockerfile、Colab notebook</td></tr>
+        <tr><td><code>policy/</code></td><td>OpenShell policy（version 1）</td></tr>
+        <tr><td><code>site/</code></td><td>この LP（GitHub Pages）</td></tr>
+        <tr><td><code>.github/</code></td><td>CI / Pages ワークフロー、Issue・PR テンプレート</td></tr>
+        <tr><td><code>CONTRIBUTING.md</code> / <code>CHANGELOG.md</code></td><td>開発参加ガイド / 変更履歴</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <a href="./index.html">概要</a> ·
+      <a href="./reference.html">リファレンス</a> ·
+      <a href="./security.html">セキュリティ</a> ·
+      <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a> ·
+      <a data-link="openshell" href="https://github.com/NVIDIA/OpenShell" target="_blank" rel="noopener">NVIDIA OpenShell</a> ·
+      <a data-link="docs" href="https://docs.nvidia.com/openshell/latest/" target="_blank" rel="noopener">ドキュメント</a> ·
+      <a data-link="sdk" href="https://pypi.org/project/openshell/" target="_blank" rel="noopener">PyPI</a> ·
+      <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/README_en.md" target="_blank" rel="noopener">English</a>
+    </p>
+    <p>Built with FastAPI · Vanilla JS · OpenShell SDK</p>
+  </div>
+</footer>
+
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

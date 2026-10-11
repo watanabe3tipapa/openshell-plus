@@ -5,7 +5,7 @@
 openshell-plus は [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) のサンドボックス管理とコマンド実行を、ブラウザだけのダッシュボードに閉じ込めた Web UI/UX です。FastAPI + Vanilla JS 製のアプリがローカル・Cloudflare Tunnel・Vercel・Google Colab のいずれでも同じコードで動きます。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.1.2-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
+[![Version](https://img.shields.io/badge/version-v0.1.3-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
 [![CI](https://img.shields.io/github/actions/workflow/status/watanabe3tipapa/openshell-plus/test.yml?label=CI)](https://github.com/watanabe3tipapa/openshell-plus/actions)
@@ -480,7 +480,9 @@ OrbStack は WSL 2 と同じく、軽量 Linux VM の kernel 共有方式を採�
 
 初心者は次の順で読むと全体像が把握しやすいです。
 
-1. [公開サイト（LP）](https://watanabe3tipapa.github.io/openshell-plus/) — 機能一覧・デプロイ形態・環境変数
+1. [公開サイト（LP）](https://watanabe3tipapa.github.io/openshell-plus/) — 概要・機能一覧・デプロイ形態・操作デモ
+   - [リファレンス](https://watanabe3tipapa.github.io/openshell-plus/reference.html) — 環境変数・API 差分・エラー対処・リポジトリ構成
+   - [セキュリティ](https://watanabe3tipapa.github.io/openshell-plus/security.html) — 認証方式・mTLS/OIDC・公開前チェックリスト
 2. `README.md`（本書）— コンセプトと運用
 3. [USAGE.md](USAGE.md) — 目的別の活用レシピ・制約・トラブルシューティング
 4. `openshell-uiux-guide.html` — 元の UI/UX ガイド（擬似 API。実 SDK との差分は「ドキュメント訂正ツール」節に整理してあります）
