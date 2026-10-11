@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenShell Plus 検証レポート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f14;
+  --surface: #111820;
+  --surface-2: #182230;
+  --ink: #e6edf3;
+  --muted: #8b9aad;
+  --accent: #2ecc71;
+  --accent-weak: color-mix(in oklab, var(--accent) 10%, var(--surface));
+  --warning: #f1c40f;
+  --warning-weak: color-mix(in oklab, var(--warning) 10%, var(--surface));
+  --danger: #e74c3c;
+  --danger-weak: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  --info: #3498db;
+  --info-weak: color-mix(in oklab, var(--info) 10%, var(--surface));
+  --line: color-mix(in oklab, var(--ink) 10%, transparent);
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -10px rgba(0,0,0,0.5);
+  --step-0: clamp(0.95rem, 0.92rem + 0.2vw, 1.05rem);
+  --step-1: clamp(1.1rem, 1.05rem + 0.3vw, 1.25rem);
+  --step-2: clamp(1.4rem, 1.2rem + 1vw, 1.8rem);
+  --step-3: clamp(1.8rem, 1.4rem + 2vw, 2.6rem);
+  --space: clamp(1.2rem, 1rem + 1vw, 2rem);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-size: var(--step-0);
+  line-height: 1.8;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+header {
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--line);
+  padding: calc(var(--space)*2) var(--space);
+  text-align: center;
+}
+header h1 {
+  font-size: var(--step-3);
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+header p {
+  color: var(--muted);
+  margin: 0;
+  font-size: var(--step-1);
+}
+
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--space);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space);
+  margin: calc(var(--space)*1.5) 0;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space);
+  box-shadow: var(--shadow);
+}
+.card h3 {
+  margin: 0 0 0.6rem;
+  font-size: var(--step-1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card .count {
+  font-family: "JetBrains Mono", monospace;
+  font-size: var(--step-3);
+  font-weight: 700;
+  margin: 0.2rem 0;
+}
+.card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.badge-critical { background: var(--danger-weak); color: #ff8a80; border-color: color-mix(in oklab, var(--danger) 30%, transparent); }
+.badge-high { background: var(--warning-weak); color: #ffe082; border-color: color-mix(in oklab, var(--warning) 30%, transparent); }
+.badge-medium { background: var(--info-weak); color: #90caf9; border-color: color-mix(in oklab, var(--info) 30%, transparent); }
+.badge-low { background: var(--accent-weak); color: #69f0ae; border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+
+section {
+  margin: calc(var(--space)*2) 0;
+}
+section h2 {
+  font-size: var(--step-2);
+  margin: 0 0 var(--space);
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.issue {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space);
+  margin: calc(var(--space)*0.8) 0;
+  box-shadow: var(--shadow);
+}
+.issue-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.issue-title {
+  font-size: var(--step-1);
+  font-weight: 700;
+  margin: 0;
+  flex: 1 1 auto;
+}
+.issue-body {
+  color: var(--muted);
+}
+.issue-body strong {
+  color: var(--ink);
+}
+.issue-body ul {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+}
+.issue-body li {
+  margin: 0.3rem 0;
+}
+
+.recommendation {
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+  padding: 0.8rem 1rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin-top: 0.8rem;
+  color: var(--ink);
+}
+
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+@media print {
+  body { background: #fff; color: #000; }
+  .no-print { display: none; }
+  .card, .issue, .toc { background: #f5f5f5; border-color: #ccc; }
+}
+@page { size: A4; margin: 16mm; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>OpenShell Plus 検証レポート</h1>
+    <p>GitHub Pages サイトおよびリポジトリの改善点・改修事項</p>
+  </div>
+</header>
+
+<main class="container">
+
+<div class="summary-grid">
+  <div class="card">
+    <h3><span class="badge badge-critical">Critical</span> 深刻</h3>
+    <div class="count">2</div>
+    <p>即座の対応が必要な問題</p>
+  </div>
+  <div class="card">
+    <h3><span class="badge badge-high">High</span> 重要</h3>
+    <div class="count">5</div>
+    <p>ユーザー体験や信頼性に影響</p>
+  </div>
+  <div class="card">
+    <h3><span class="badge badge-medium">Medium</span> 中程度</h3>
+    <div class="count">4</div>
+    <p>改善推奨事項</p>
+  </div>
+  <div class="card">
+    <h3><span class="badge badge-low">Low</span> 軽微</h3>
+    <div class="count">3</div>
+    <p>長期的な改善・最適化</p>
+  </div>
+</div>
+
+<section id="critical">
+  <h2><span class="badge badge-critical">Critical</span> 深刻な問題</h2>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">コンテンツの途中欠落</h3>
+      <span class="badge badge-critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>GitHub Pages の「ガイドの訂正点（実 API との差分）」セクションが途中で強制切断されており、最後の行が <code>get / list / delete / exec は name と workspa...</code> で終わっている。読者に対して重要な実装注意点が不完全な状態で公開されている。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 該当セクションの全文を確認し、欠落部分を補完する。同様に、他のセクションでも末尾の切れがないか一括検証すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">WebSocket 認証で URL クエリパラメータによるトークン受付</h3>
+      <span class="badge badge-critical">Critical</span>
+    </div>
+    <div class="issue-body">
+      <p>README によれば、WebSocket はブラウザからヘッダを付けられないため <code>Sec-WebSocket-Protocol: bearer.*</code> と <code>?token=</code> の両方を受理している。URL クエリに認証トークンを含める設計は、サーバーアクセスログ・ブラウザ履歴・リファラーにトークンが残るリスクがある。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> <code>?token=</code> による受付を廃止し、WebSocket 接続確立前の別途 HTTP エンドポイントで一時的な接続 ID（JWT 等）を発行してから WebSocket へ移行する方式、または Subprotocol 方式のみに絞ることを検討。どうしても必な場合は、そのリスクをドキュメントに明記し、トークンの有効期限を極力短く設定すること。
+      </div>
+    </div>
+  </article>
+</section>
+
+<section id="high">
+  <h2><span class="badge badge-high">High</span> 重要な改善事項</h2>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">1 ページへの情報過多とナビゲーション不足</h3>
+      <span class="badge badge-high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>GitHub Pages は単一ページに OpenShell 本体の解説、脅威モデル、構成要素、ネットワーク要求の流れ、デプロイ形態、Colab 手順、環境変数一覧などが全て詰め込まれている。スクロール量が極端に多く、目的の情報に到達するまでの導線が弱い。目次（TOC）やページ内検索もない。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> ランディングページは「openshell-plus とは何か・何ができるか・始め方」の 3 要素に絞り、詳細な技術解説は別ページ（Getting Started / Reference / Security 等）へ分割。固定ヘッダーまたはサイドバーでグローバルナビゲーションを提供すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">スクリーンショット・デモ動画の欠如</h3>
+      <span class="badge badge-high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>UI/UX ダッシュボード製品であるにもかかわらず、README および GitHub Pages に実際の画面キャプチャや短いデモ GIF が存在しない。Stars/Forks が 0 である背景には、視には、視覚的な価値訴求が弱いことが大きく影響している可能性がある。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 以下を作成・掲載すること。
+        <ul>
+          <li>ダッシュボードの主要画面（一覧 / コンソール / 作成フォーム）のスクリーンショット</li>
+          <li>10〜15 秒程度の操作デモ GIF または動画（sandbox 作成からコマンド実行まで）</li>
+          <li>OGP 画像（ソシャルシェア時のプレビュー用）</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">demo フォールバックのデフォルト有効化リスク</h3>
+      <span class="badge badge-high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>デフォルトで gateway 接続失敗時に demo backend へフォールバックする。ローカル開発では便利だが、本番運用時に意図せず demo モードで起動し、ユーザーが実際の sandbox 操作を行っているつもりでモックデータを操作する事故が起こりうる。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 本番環境（<code>OSUI_MODE=cloudflare / vercel / colab</code> 以外の公開 bind）では、起動時に demo フォールバックを無効にするか、UI に常時「DEMO MODE」バナーを表示して視覚的に区別すること。あるいは <code>OSUI_REQUIRE_GATEWAY</code> をデフォルト <code>true</code> に変更し、明示的なオプトインで demo を有効化する設計を検討。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">プロジェクト運用基盤の未整備</h3>
+      <span class="badge badge-high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>リポジトリに CONTRIBUTING.md、CHANGELOG、GitHub Releases、Issue テンプレートが存在しない。外部からのフィードバックや協力を受ける仕組みがなく、プロジェクトの持続可能性が低い。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong>
+        <ul>
+          <li>CONTRIBUTING.md（開発環境築、PR フロー、コミット規約）</li>
+          <li>CHANGELOG.md（Semantic Versioning 準拠）</li>
+          <li>GitHub Issue / PR テンプレート</li>
+          <li>初回の GitHub Release（v0.1.0 等）を作成し、変更概要を記載</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">英語版の存在が不明確</h3>
+      <span class="badge badge-high">High</span>
+    </div>
+    <div class="issue-body">
+      <p>README に「日本語 | English」とあるが、English 版へのリンク先や実際のコンテンツが確認できない。NVIDIA OpenShell はグローバルなプロジェクトであるため英語ドキュメントの有無は採用率に直結する。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 英語版ページ（<code>/en/</code> 等）を作成するか、現時点で未対応なら「英語版は準備中」と明記。README のリンクを切れない状態に保つこと。
+      </div>
+    </div>
+  </article>
+</section>
+
+<section id="medium">
+  <h2><span class="badge badge-medium">Medium</span> 中程度の改善事項</h2>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">SEO / OGP / アクセシビリティの未確認</h3>
+      <span class="badge badge-medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>GitHub Pages のメタタグ（description, og:title, og:image, twitter:card 等）や構造化データの有無が不明。検索エンジンや SNS からの流入を最大化するための基盤が整っているか確認が必要。また、カラーコントラスト、キーボードナビゲーション、スクリーンリーダー対応（aria-label 等）の検証も推奨される。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> Lighthouse（Chrome DevTools）でスコアを計測し、SEO / Accessibility / Best Practices が 90 以上を目標に改修。特に OGP 画像と正確な meta description を設定すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">エラーハンドリングとユーザーへのフィードバック設計</h3>
+      <span class="badge badge-medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>ドキュメント上、エラー時の UI 挙動（例: gateway 接続タイムアウト、policy 違反、認証失敗時のメッセージ）の記述が少ない。ユーザーがトラブルに遭遇した際に原因を自己解決できる設計になっているか不透明。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 主要なエラーコード・例外を一覧化し、UI 上に「原因 / 対処法」を提示するヘルプリンクを設置。トースト通知やインラインエラーメッセージのデザインパターンを統一すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">テスト・カバレッジの可視化</h3>
+      <span class="badge badge-medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p><code>uv run pytest</code> でテスト実行は可能とあるが、テストカバレッジの基準や CI 上での自動計測（Codecov 等）の有無が不明。信頼性の高い OSS としてはカバレッジレポートの公開が望ましい</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> GitHub Actions で PR 時に pytest + coverage を実行し、カバレッジバッジを README に掲載。目標カバレッジ（例: 70% 以上）を CONTRIBUTING.md に明記すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">インタラクティブ構成図のフォールバック</h3>
+      <span class="badge badge-medium">Medium</span>
+    </div>
+    <div class="issue-body">
+      <p>「インタラクティブに操作できる構成図」と謳っているが、JavaScript 無効環境や一部のモバイルブラウザ、RSS リーダー内では表示されない可能性がある。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 静的な PNG / SVG 版の構成図を <code>&lt;noscript&gt;</code> または画像要素で並設し、検索エンジンや代替環境でも情報が伝わるようにすること。
+      </div>
+    </div>
+  </article>
+</section>
+
+<section id="low">
+  <h2><span class="badge badge-low">Low</span> 軽微な改善・最適化</h2>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">README の「Version」表記が空欄</h3>
+      <span class="badge badge-low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p>README 内に「Version」とあるが値が記載されていない。細部の見栄えに影響。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> 現在のバージョン（例: 0.1.0）を記入し、リリース時に更新する運用を徹底。または動的バッジ（shields.io）を利用。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">ファビコン・ブランドカラーの未設定</h3>
+      <span class="badge badge-low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p>独自のファビコンやテーマカラー（theme-color）が設定されていない場合、ブラウザタブやモバイルホーム画面での印象が弱い。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> openshell-plus 独自のロゴマーク（シンプルなアイコンでも可）を作成し、ファビコンと Apple touch icon、theme-color メタタグを設定すること。
+      </div>
+    </div>
+  </article>
+
+  <article class="issue">
+    <div class="issue-header">
+      <h3 class="issue-title">pip ベースの代替インストール手順</h3>
+      <span class="badge badge-low">Low</span>
+    </div>
+    <div class="issue-body">
+      <p><code>uv</code> を推奨しているが、従来の <code>pip</code> ユーザーや Poetry ユーザーのための代替手順がない。導入障壁を下げる観点から補足が望ましい。</p>
+      <div class="recommendation">
+        <strong>推奨対応:</strong> README に「uv を使わない場合」の最小手順（requirements.txt 等）を追記、または <code>pip install -e ".[dev]"</code> 相当のコマンド例を提示すること。
+      </div>
+    </div>
+  </article>
+</section>
+
+<section id="positive">
+  <h2>評価できる点</h2>
+  <div class="issue" style="border-color: var(--accent);">
+    <div class="issue-body">
+      <ul>
+        <li><strong>セキュリティ設計明示:</strong> loopback 以外 bind 時のトークン強制、demo フォールバックの切り替え、mTLS / OIDC 対応など、公開安全性を意識した設計がコード・ドキュメント双方に反映されている。</li>
+        <li><strong>lint / 型チェックの整備:</strong> ruff と pyright を併用しており、コード品質の基盤は良好。</li>
+        <li><strong>多様なデプロイ形態:</strong> ローカル・Cloudflare・Vercel・Colab の 4 形態を同一コードベースでカバーする設計は実用的で評価できる。</li>
+        <li><strong>ドキュメント訂正の取り組み:</strong> OpenShell 公式ガイドと実 SDK の差分を整理し、実装に反映している点はユーザー視点で価値が高い。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer style="text-align:center; padding: calc(var(--space)*2) var(--space); color: var(--muted); border-top: 1px solid var(--line); margin-top: calc(var(--space)*2);">
+  <p>検証日: 2026-10-11 | 対象: <a href="https://watanabe3tipapa.github.io/openshell-plus/">GitHub Pages</a> / <a href="https://github.com/watanabe3tipapa/openshell-plus">Repository</a></p>
+</footer>
+
+</body>
+</html>

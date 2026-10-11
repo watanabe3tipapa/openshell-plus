@@ -327,9 +327,101 @@ footer a { margin: 0 0.35rem; }
   padding: 6px 14px;
 }
 
+/* ---- スキップリンク / ナビゲーション ---- */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  z-index: 200;
+  background: var(--accent);
+  color: var(--fg);
+  border: 3px solid var(--border);
+  padding: 8px 14px;
+  font-weight: 700;
+}
+.skip-link:focus { left: 8px; top: 8px; }
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 4px solid var(--border);
+}
+.site-nav .nav-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 6px 28px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow-x: auto;
+}
+.site-nav a {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 6px 9px;
+  font-size: var(--step--2);
+  white-space: nowrap;
+  font-weight: 700;
+}
+.site-nav a:hover { background: var(--accent); border-bottom-color: var(--border); }
+
+/* ---- 目次 ---- */
+.toc {
+  border: 4px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 14px 18px;
+  margin: 18px 0 6px;
+}
+.toc-title {
+  font-weight: 700;
+  margin: 0 0 6px;
+  font-size: var(--step--1);
+}
+.toc ol {
+  columns: 2;
+  column-gap: 30px;
+  margin: 0 0 0 1.2rem;
+}
+.toc a { border: 0; padding: 0; }
+.toc a:hover { background: var(--accent); }
+
+/* ---- スクリーンショット ---- */
+.screenshots { margin: 1.2rem 0; }
+.screenshots figure {
+  border: 4px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  overflow: hidden;
+  margin: 0 0 16px;
+}
+.screenshots img { display: block; width: 100%; height: auto; }
+.screenshots figcaption {
+  padding: 8px 14px;
+  font-size: var(--step--2);
+  border-top: 3px solid var(--border);
+  background: var(--muted);
+}
+.static-diagram {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 4px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0f19;
+  margin: 1rem 0;
+}
+
+/* 固定ナビの下にアンカー先が隠れないようにする */
+[id] { scroll-margin-top: 74px; }
+
 @media (max-width: 640px) {
   body { padding-top: 14px; }
   .wrap { margin: 0 14px; padding: 20px 16px 30px; border-width: 4px; }
+  .site-nav .nav-inner { padding: 6px 16px; }
+  .toc ol { columns: 1; }
   .hero-title { font-size: 2rem; }
   .cta { flex-direction: column; align-items: stretch; }
   .flow .arrow { display: none; }
@@ -344,5 +436,5 @@ footer a { margin: 0 0.35rem; }
 @media print {
   body { padding-top: 0; }
   .wrap, footer { border: none; margin: 0; padding: 0; background: none; }
-  .btn, .diagram-actions { display: none; }
+  .btn, .diagram-actions, .site-nav, .skip-link { display: none; }
 }

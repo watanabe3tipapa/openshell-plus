@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 560" width="1240" height="560" role="img" aria-labelledby="diagram-title diagram-desc" font-family="'Inter', 'Noto Sans JP', sans-serif">
+  <title id="diagram-title">openshell-plus 構成図（静的版）</title>
+  <desc id="diagram-desc">ブラウザから FastAPI、backend、OpenShell gateway、supervisor、sandbox へと至る操作の流れと、gateway 到達不能時に demo backend へフォールバックする経路を示す静的な構成図。</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#76b900"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9ca3af"/>
+    </marker>
+    <marker id="arrow-out" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect width="1240" height="560" fill="#0b0f19"/>
+
+  <text x="40" y="52" fill="#f3f4f6" font-size="24" font-weight="700">openshell-plus 構成図</text>
+  <text x="40" y="78" fill="#9ca3af" font-size="14">ブラウザ → FastAPI → backend → OpenShell gateway → 隔離境界</text>
+
+  <rect x="838" y="150" width="400" height="220" rx="16" fill="rgba(118,185,0,0.06)" stroke="#76b900" stroke-opacity="0.4" stroke-dasharray="6 6"/>
+  <text x="858" y="176" fill="#76b900" font-size="12" font-weight="700" letter-spacing="0.1em">隔離境界（唯一の egress）</text>
+
+  <g font-size="13" fill="#f3f4f6" text-anchor="middle">
+    <g>
+      <rect x="40" y="200" width="170" height="120" rx="12" fill="#111827" stroke="rgba(255,255,255,0.12)"/>
+      <text x="125" y="250" font-weight="700">ブラウザ</text>
+      <text x="125" y="274" fill="#9ca3af" font-size="11">Vanilla JS</text>
+      <text x="125" y="292" fill="#9ca3af" font-size="11">ダッシュボード</text>
+    </g>
+    <g>
+      <rect x="250" y="200" width="170" height="120" rx="12" fill="#111827" stroke="rgba(255,255,255,0.12)"/>
+      <text x="335" y="250" font-weight="700">FastAPI</text>
+      <text x="335" y="274" fill="#9ca3af" font-size="11">REST</text>
+      <text x="335" y="292" fill="#9ca3af" font-size="11">WebSocket · SSE</text>
+    </g>
+    <g>
+      <rect x="460" y="200" width="170" height="120" rx="12" fill="#111827" stroke="rgba(118,185,0,0.5)"/>
+      <text x="545" y="250" font-weight="700">Backend</text>
+      <text x="545" y="274" fill="#9ca3af" font-size="11">OpenShell SDK</text>
+      <text x="545" y="292" fill="#9ca3af" font-size="11">または demo</text>
+    </g>
+    <g>
+      <rect x="670" y="200" width="150" height="120" rx="12" fill="#111827" stroke="rgba(255,255,255,0.12)"/>
+      <text x="745" y="250" font-weight="700">gateway</text>
+      <text x="745" y="274" fill="#9ca3af" font-size="11">コントロール</text>
+      <text x="745" y="292" fill="#9ca3af" font-size="11">プレーン</text>
+    </g>
+  </g>
+
+  <g font-size="13" fill="#f3f4f6" text-anchor="middle">
+    <g>
+      <rect x="858" y="200" width="160" height="120" rx="12" fill="#111827" stroke="rgba(118,185,0,0.5)"/>
+      <text x="938" y="250" font-weight="700">supervisor</text>
+      <text x="938" y="274" fill="#9ca3af" font-size="11">信頼側</text>
+      <text x="938" y="292" fill="#9ca3af" font-size="11">policy 照合</text>
+    </g>
+    <g>
+      <rect x="1048" y="200" width="160" height="120" rx="12" fill="#111827" stroke="rgba(255,255,255,0.12)"/>
+      <text x="1128" y="250" font-weight="700">sandbox</text>
+      <text x="1128" y="274" fill="#9ca3af" font-size="11">非信頼側</text>
+      <text x="1128" y="292" fill="#9ca3af" font-size="11">workload</text>
+    </g>
+  </g>
+
+  <rect x="460" y="400" width="170" height="86" rx="12" fill="#111827" stroke="rgba(245,158,11,0.5)"/>
+  <text x="545" y="436" fill="#f59e0b" font-size="13" font-weight="700" text-anchor="middle">demo backend</text>
+  <text x="545" y="458" fill="#9ca3af" font-size="11" text-anchor="middle">in-memory</text>
+  <text x="545" y="474" fill="#9ca3af" font-size="11" text-anchor="middle">サンプルデータ</text>
+
+  <g stroke="#76b900" stroke-width="2" fill="none">
+    <line x1="210" y1="260" x2="248" y2="260" marker-end="url(#arrow)"/>
+    <line x1="420" y1="260" x2="458" y2="260" marker-end="url(#arrow)"/>
+    <line x1="630" y1="260" x2="668" y2="260" marker-end="url(#arrow)"/>
+    <line x1="820" y1="260" x2="856" y2="260" marker-end="url(#arrow)"/>
+    <line x1="1018" y1="260" x2="1046" y2="260" marker-end="url(#arrow)"/>
+  </g>
+
+  <path d="M545 320 L545 398" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="5 5" marker-end="url(#arrow-out)"/>
+  <text x="556" y="366" fill="#f59e0b" font-size="11">gateway 到達不能時にフォールバック</text>
+
+  <path d="M938 200 L938 140" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrow-out)"/>
+  <text x="948" y="128" fill="#f59e0b" font-size="11">承認済み宛先のみ中継</text>
+
+  <text x="40" y="536" fill="#9ca3af" font-size="12">ブラウザからのリクエストは gateway を経由して sandbox に届き、外向き通信は supervisor が policy に照らして検査します。</text>
+</svg>

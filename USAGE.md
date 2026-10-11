@@ -169,10 +169,11 @@ export OSUI_REQUIRE_GATEWAY=true
 
 - **`/api/health` だけは認証対象外**です（ロードバランサや監視の疎通確認を想定して意図的に開いています）
 - loopback 以外の bind でトークン未設定だと、起動そのものが拒否されます
-- トークンを受け取れる場所は 3 か所です
+- トークンを受け取れる場所は原則 2 か所です
   - `Authorization: Bearer <token>`（REST と WebSocket の主経路）
   - `Sec-WebSocket-Protocol: bearer.<token>`（ブラウザの WebSocket はヘッダーをカスタムできないため）
-  - `?token=<token>`（SSE と `EventSource`）
+- `?token=<token>` での受け取りは**既定で無効**です。SSE を `EventSource` で使う等、URL 埋め込みが必要な環境だけ
+  `OSUI_ALLOW_QUERY_TOKEN=true` で明示的に許可してください（URL はログ・履歴・Referer に残ります）
 - WebSocket の認証に失敗すると close code **4401** で切断されます
 - トークンは画面上でセッション内だけ保持されます（タブを閉じると消えます）
 - 静的アセットはトークンなしで配信されます（機密情報は含まれません）
@@ -381,7 +382,7 @@ gateway に接続できないときの代替です。**画面と操作は本物�
 ## 9. やってはいけないこと
 
 - **`OSUI_AUTH_TOKEN` を設定せずに `0.0.0.0` へ bind する** — 起動は拒否されます。バインド先を変える手段は `OSUI_HOST` だけですが、公開する前に意図を確認してください
-- **トークンを URL に埋め込んだまま共有する** — `?token=` は各省のアクセスログや履歴に残ります。SSE 以外の用途では `Authorization` を使ってください
+- **トークンを URL に埋め込んだまま共有する** — `?token=` は各省のアクセスログや履歴に残ります。既定では受け付けない設定です（`OSUI_ALLOW_QUERY_TOKEN=true` で許可した場合のみ有効）。特別な理由がなければ `Authorization` を使ってください
 - **Vercel から手元の gateway に届くことと期待する** — 到達できません。Vercel は demo の確認用です
 - **Colab で公開トンネルを張る** — Colab の利用規約に抵触します。ノートブック内の該当セルはコメントアウトされています
 - **demo backend の成功を実 gateway の成功として扱う** — 擬似応答です

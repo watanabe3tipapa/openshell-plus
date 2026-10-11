@@ -36,6 +36,15 @@ def test_extract_token_prefers_header() -> None:
     assert extract_token(FakeRequest()) == "header-token"  # type: ignore[arg-type]
 
 
+def test_extract_token_ignores_query_param_by_default() -> None:
+    class FakeRequest:
+        headers = {"authorization": "", "sec-websocket-protocol": ""}
+        query_params: dict[str, str] = {"token": "query-token"}
+
+    assert extract_token(FakeRequest()) is None  # type: ignore[arg-type]
+    assert extract_token(FakeRequest(), allow_query=True) == "query-token"  # type: ignore[arg-type]
+
+
 def test_token_matches_open_mode() -> None:
     assert token_matches(make_settings(), None) is True
 
@@ -83,14 +92,38 @@ def test_wrong_token_is_rejected(secured_client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_query_token_is_accepted_for_sse(secured_client: TestClient) -> None:
+def test_query_token_is_rejected_by_default(secured_client: TestClient) -> None:
     assert (
         secured_client.post("/api/sandboxes", json={"name": "q"}, headers=AUTH).status_code == 201
     )
-    with secured_client.stream(
-        "GET", f"/api/sandboxes/q/exec/stream?command=ls&token={TOKEN}"
-    ) as response:
-        assert response.status_code == 200
+    response = secured_client.get(f"/api/sandboxes/q/exec/stream?command=ls&token={TOKEN}")
+    assert response.status_code == 401
+
+
+def test_query_token_is_accepted_when_enabled() -> None:
+    with make_client(auth_token=TOKEN, allow_query_token=True) as client:
+        assert client.post("/api/sandboxes", json={"name": "q"}, headers=AUTH).status_code == 201
+        with client.stream(
+            "GET", f"/api/sandboxes/q/exec/stream?command=ls&token={TOKEN}"
+        ) as response:
+            assert response.status_code == 200
+
+
+def test_websocket_query_token_is_rejected_by_default(secured_client: TestClient) -> None:
+    with (
+        pytest.raises(WebSocketDisconnect) as excinfo,
+        secured_client.websocket_connect(f"/api/sandboxes/w/exec?token={TOKEN}") as socket,
+    ):
+        socket.receive_json()
+    assert excinfo.value.code == 4401
+
+
+def test_websocket_query_token_is_accepted_when_enabled() -> None:
+    with make_client(auth_token=TOKEN, allow_query_token=True) as client:
+        assert client.post("/api/sandboxes", json={"name": "w"}, headers=AUTH).status_code == 201
+        with client.websocket_connect(f"/api/sandboxes/w/exec?token={TOKEN}") as socket:
+            socket.send_text('{"command": ["ls"]}')
+            assert socket.receive_json()["type"] == "stdout"
 
 
 def test_websocket_accepts_subprotocol_token(secured_client: TestClient) -> None:

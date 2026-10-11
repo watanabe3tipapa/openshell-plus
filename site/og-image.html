@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>OpenShell Plus — OGP card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --accent: #76b900; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: "Inter", "Noto Sans JP", sans-serif;
+    background:
+      radial-gradient(120% 90% at 12% 0%, rgba(118,185,0,0.28) 0%, transparent 55%),
+      radial-gradient(90% 80% at 100% 100%, rgba(118,185,0,0.12) 0%, transparent 60%),
+      #0b0f19;
+    color: #f3f4f6;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 76px 80px;
+  }
+  .top { display: flex; align-items: center; gap: 22px; }
+  .logo { width: 96px; height: 96px; flex: none; }
+  h1 { font-size: 76px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .brandline { font-size: 26px; color: #9ca3af; margin-top: 10px; font-weight: 600; }
+  .lead { font-size: 30px; line-height: 1.5; color: #d1d5db; max-width: 22ch; font-weight: 600; }
+  .lead b { color: var(--accent); font-weight: 700; }
+  .chips { display: flex; gap: 14px; flex-wrap: wrap; }
+  .chip {
+    font-family: "JetBrains Mono", monospace; font-size: 20px;
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(118,185,0,0.12); color: var(--accent);
+    border: 1px solid rgba(118,185,0,0.35);
+  }
+  .chip.muted { background: rgba(255,255,255,0.06); color: #9ca3af; border-color: rgba(255,255,255,0.12); }
+</style>
+</head>
+<body>
+  <div class="top">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#0f172a"/>
+      <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#76b900" stroke-opacity="0.45" stroke-width="1.5"/>
+      <path d="M32 13 L47 19.5 V32 C47 41 40.5 47.8 32 51 C23.5 47.8 17 41 17 32 V19.5 Z" fill="none" stroke="#76b900" stroke-width="2.6" stroke-linejoin="round"/>
+      <path d="M25 32.5 L30 37.5 L40 26.5" fill="none" stroke="#76b900" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>OpenShell Plus</h1>
+      <div class="brandline">OpenShell を、ブラウザから。</div>
+    </div>
+  </div>
+  <div class="lead">NVIDIA OpenShell のサンドボックス管理と<br>コマンド実行を、<b>ブラウザだけ</b>で。</div>
+  <div class="chips">
+    <span class="chip">FastAPI</span>
+    <span class="chip muted">Vanilla JS</span>
+    <span class="chip muted">WebSocket / SSE</span>
+    <span class="chip muted">local · Cloudflare · Vercel · Colab</span>
+  </div>
+</body>
+</html>

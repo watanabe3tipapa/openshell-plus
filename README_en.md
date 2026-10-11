@@ -5,9 +5,10 @@
 openshell-plus is a web UI/UX for [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) that moves sandbox management and command execution into a single browser dashboard. One FastAPI + Vanilla JS application runs unchanged on local, Cloudflare Tunnel, Vercel, and Google Colab.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.1.1-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
+[![Version](https://img.shields.io/badge/version-v0.1.2-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
+[![CI](https://img.shields.io/github/actions/workflow/status/watanabe3tipapa/openshell-plus/test.yml?label=CI)](https://github.com/watanabe3tipapa/openshell-plus/actions)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
 [日本語](README.md) | [English](README_en.md)
@@ -57,7 +58,7 @@ This repository also addresses the fact that pseudocode in a design guide often 
 ### Backends
 
 - `core/backends/base.py` defines a `SandboxBackend` Protocol, so the OpenShell SDK and an in-memory demo satisfy one contract
-- `core/factory.py` probes the gateway with a health call at startup and falls back to demo when unreachable (`OSUI_REQUIRE_GATEWAY=true` switches to fail-fast)
+- `core/factory.py` probes the gateway with a health call at startup and falls back to demo when unreachable (`OSUI_REQUIRE_GATEWAY=true` switches to fail-fast; a persistent "DEMO MODE" banner is shown when the demo backend is active)
 - The synchronous SDK is wrapped with `asyncio.to_thread`, keeping the API layer fully async
 - `status.phase` is mapped through `phase_label()` for display
 
@@ -71,7 +72,8 @@ This repository also addresses the fact that pseudocode in a design guide often 
 
 - Setting `OSUI_AUTH_TOKEN` protects every `/api/*` route and the WebSocket handshake
 - **Binding to a non-loopback address without a token is refused** (`SettingsError`), so a public misconfiguration fails at construction time
-- Browsers cannot attach headers to a WebSocket, so `Sec-WebSocket-Protocol: bearer.*` and `?token=` are also accepted
+- Browsers cannot attach headers to a WebSocket, so `Sec-WebSocket-Protocol: bearer.*` is accepted (and used by the bundled UI)
+- **Query-string tokens (`?token=`) are disabled by default** (`OSUI_ALLOW_QUERY_TOKEN=true` re-enables them). A URL is logged in server logs, browser history, and Referer headers, so this is discouraged
 - mTLS and OIDC client credentials are supported, and the "TLS required for non-loopback gateways" rule is validated at startup
 
 ### Bundled content
@@ -83,6 +85,17 @@ This repository also addresses the fact that pseudocode in a design guide often 
 - **[Landing page](site/)** — deployed to GitHub Pages automatically
 - **[USAGE.md](USAGE.md)** — recipes by goal, constraints, troubleshooting (Japanese)
 - **[Architecture diagram](site/diagrams/openshell-plus-architecture.html)** — browser to FastAPI to gateway to isolation boundary (generated with Archify, also embedded in the LP)
+
+## Screenshots
+
+The dashboard combines the sandbox list, the shell console, and the create form on one screen.
+
+![Dashboard running on the demo backend](site/screenshots/dashboard.png)
+
+- **List:** `phase` rendered as a localized, colored badge (`running` / `stopped` / `failed`, etc.), auto-refreshed every 8 seconds
+- **Console:** WebSocket streaming of stdout / stderr, with optional `workdir` and `timeout_seconds`
+- **Create form:** name (+ optional exposed port / service name)
+- The yellow bar in the screenshot is the persistent "DEMO MODE" banner shown when the gateway is unreachable and the demo backend is active
 
 ## Try it on Google Colab (3 steps, no clone)
 
@@ -147,6 +160,16 @@ cd openshell-plus
 
 ```bash
 uv sync --all-extras
+```
+
+**Without uv** — use a virtual environment with Python 3.12+ and plain `pip`. Behavior is identical (include the `[openshell]` extra when you want the real SDK).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e ".[openshell]"        # with OpenShell SDK support
+# for development: pip install -e ".[openshell,dev]"
 ```
 
 3. Launch
@@ -446,6 +469,7 @@ because Vercel closes connections at `maxDuration`.
 | `OSUI_AUTH_TOKEN` | (optional) | Setting it protects every API route and the console |
 | `OSUI_DEMO` | `false` | Force the demo backend |
 | `OSUI_REQUIRE_GATEWAY` | `false` | Disable the demo fallback and fail instead |
+| `OSUI_ALLOW_QUERY_TOKEN` | `false` | Accept `?token=` authentication. Disabled by default because the token ends up in logs, history, and Referer headers |
 | `OSUI_WORKSPACE` | `default` | Target workspace |
 | `OSUI_SSE_ENABLED` | `true` | Whether the SSE endpoint is exposed |
 | `OSUI_GATEWAY_ENDPOINT` | (SDK auto-detect) | Set an explicit gateway endpoint |
@@ -467,7 +491,7 @@ For newcomers, reading in this order gives you the full picture.
 
 ## Contributing
 
-Contributions are welcome. Before making major changes, please open an [issue](https://github.com/watanabe3tipapa/openshell-plus/issues) to share your plans first.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, commit conventions, and quality gates, and [CHANGELOG.md](CHANGELOG.md) for history. Before making major changes, please open an [issue](https://github.com/watanabe3tipapa/openshell-plus/issues) to share your plans first.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -477,10 +501,10 @@ Contributions are welcome. Before making major changes, please open an [issue](h
 
 ```bash
 uv sync --all-extras
-uv run pytest        # 149 tests
+uv run pytest        # 153 tests (coverage >= 70% is enforced in CI)
 uv run ruff check .
 uv run ruff format --check .
-uv run pyright       # type check, zero errors
+uv run pyright       # type check (0 errors)
 ```
 
 The tests use the demo backend and never contact a gateway. `make_settings()` in

@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     exec_max_timeout: int = 1800
 
     sse_enabled: bool = True
+    # クエリ文字列 `?token=` での認証を許可するか。既定は無効。
+    # URL はアクセスログ・ブラウザ履歴・Referer に残るため、必要な場合のみ有効化する。
+    allow_query_token: bool = False
     cors_origins: list[str] = Field(default_factory=list)
 
     gateway_endpoint: str | None = None

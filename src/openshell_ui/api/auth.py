@@ -21,7 +21,7 @@ def token_from_subprotocol(value: str | None) -> str | None:
     return None
 
 
-def extract_token(request: Request) -> str | None:
+def extract_token(request: Request, *, allow_query: bool = False) -> str | None:
     header = request.headers.get("authorization", "")
     if header.lower().startswith("bearer "):
         candidate = header[7:].strip()
@@ -30,7 +30,10 @@ def extract_token(request: Request) -> str | None:
     token = token_from_subprotocol(request.headers.get("sec-websocket-protocol"))
     if token:
         return token
-    return request.query_params.get("token") or None
+    # クエリ文字列のトークンは既定で拒否する。URL がログ・履歴・Referer に残るため。
+    if allow_query:
+        return request.query_params.get("token") or None
+    return None
 
 
 def token_matches(settings: Settings, provided: str | None) -> bool:
@@ -42,7 +45,9 @@ def token_matches(settings: Settings, provided: str | None) -> bool:
 
 
 async def require_auth(request: Request) -> None:
-    if not token_matches(request.app.state.settings, extract_token(request)):
+    settings: Settings = request.app.state.settings
+    provided = extract_token(request, allow_query=settings.allow_query_token)
+    if not token_matches(settings, provided):
         raise HTTPException(
             status_code=401,
             detail="invalid or missing bearer token",

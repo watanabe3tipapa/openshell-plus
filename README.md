@@ -5,9 +5,10 @@
 openshell-plus は [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) のサンドボックス管理とコマンド実行を、ブラウザだけのダッシュボードに閉じ込めた Web UI/UX です。FastAPI + Vanilla JS 製のアプリがローカル・Cloudflare Tunnel・Vercel・Google Colab のいずれでも同じコードで動きます。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v0.1.1-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
+[![Version](https://img.shields.io/badge/version-v0.1.2-blue.svg)](https://github.com/watanabe3tipapa/openshell-plus/releases)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-live-blue.svg)](https://watanabe3tipapa.github.io/openshell-plus/)
 [![GitHub](https://img.shields.io/github/issues/watanabe3tipapa/openshell-plus.svg)](https://github.com/watanabe3tipapa/openshell-plus/issues)
+[![CI](https://img.shields.io/github/actions/workflow/status/watanabe3tipapa/openshell-plus/test.yml?label=CI)](https://github.com/watanabe3tipapa/openshell-plus/actions)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/watanabe3tipapa/openshell-plus/blob/main/deploy/colab/openshell_colab.ipynb)
 
 [日本語](README.md) | [English](README_en.md)
@@ -57,7 +58,7 @@ OpenShell は強いサンドボックス実行環境ですが、操作の入口�
 ### バックエンド
 
 - `core/backends/base.py` に `SandboxBackend` Protocol を定義し、OpenShell SDK と in-memory demo の 2 実装を同じ契約で提供する
-- `core/factory.py` が起動時に gateway へ `health` で接続し、到達できなければ demo へフォールバック（`OSUI_REQUIRE_GATEWAY=true` で fail-fast に切り替え可能）
+- `core/factory.py` が起動時に gateway へ `health` で接続し、到達できなければ demo へフォールバック（`OSUI_REQUIRE_GATEWAY=true` で fail-fast に切り替え可能。フォールバック時は UI 上部に常時「DEMO MODE」バナーを表示）
 - 同期 SDK を `asyncio.to_thread` でラップし、UI 側は完全に非同期
 - `status.phase` は int enum。UI 向けに `phase_label()` で日本語ラベルへ変換
 
@@ -71,7 +72,8 @@ OpenShell は強いサンドボックス実行環境ですが、操作の入口�
 
 - `OSUI_AUTH_TOKEN` を設定すると全 `/api/*` と WebSocket ハンドシェイクが保護される
 - **loopback 以外の bind ではトークンなし起動を拒否する**（`SettingsError`）。公開設定の事故を構成時点で防ぐ
-- WebSocket はブラウザからヘッダを付けられないため、`Sec-WebSocket-Protocol: bearer.*` と `?token=` も受理
+- WebSocket はブラウザからヘッダを付けられないため、`Sec-WebSocket-Protocol: bearer.*` を受理する（同梱 UI はこれを使用）
+- URL クエリの `?token=` は**既定で無効**（`OSUI_ALLOW_QUERY_TOKEN=true` で明示的に許可する場合のみ）。URL はアクセスログ・ブラウザ履歴・Referer に残るため非推奨
 - mTLS と OIDC クライアント認証に対応し、loopback 以外の gateway に対する TLS 必須ルールを起動時に検証
 
 ### 同梱コンテンツ
@@ -83,6 +85,17 @@ OpenShell は強いサンドボックス実行環境ですが、操作の入口�
 - **[LP](site/)** — GitHub Pages へ自動デプロイ
 - **[USAGE.md](USAGE.md)** — 目的別の活用レシピ・制約・トラブルシューティング
 - **[構成図](site/diagrams/openshell-plus-architecture.html)** — ブラウザ → FastAPI → gateway → 隔離境界の全体像（Archify 生成、LP にも埋め込み済み）
+
+## 画面
+
+ダッシュボードはサンドボックス一覧・シェルコンソール・作成フォームを 1 画面にまとめています。詳細は[公開サイト](https://watanabe3tipapa.github.io/openshell-plus/)（LP）を参照してください。
+
+![ダッシュボード（demo backend 稼働中）](site/screenshots/dashboard.png)
+
+- 一覧: `phase` を日本語ラベルと色で表示（`running` / `stopped` / `failed` 等）。8 秒ごとに自動更新
+- コンソール: WebSocket で stdout / stderr をストリーミング。`workdir` と `timeout_seconds` を指定可能
+- 作成フォーム: 名前（+ 公開ポート / サービス名）を指定して作成
+- 上記スクリーンショットの黄色帯は、gateway 未接続で demo backend が起動した際の「DEMO MODE」バナーです
 
 ## Colab で試す（3 ステップ・clone 不要）
 
@@ -147,6 +160,16 @@ cd openshell-plus
 
 ```bash
 uv sync --all-extras
+```
+
+**uv を使わない場合** は、Python 3.12 以上の仮想環境を作って `pip` で導入できます。動きは同じです（`openshell` 本体を使う場合は `[openshell]` エクストラ込みでインストールしてください）。
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e ".[openshell]"        # OpenShell SDK を使う場合（同梱 UI + API のみなら .[dev] で可）
+# 開発時は: pip install -e ".[openshell,dev]"
 ```
 
 3. 起動
@@ -444,6 +467,7 @@ OrbStack は WSL 2 と同じく、軽量 Linux VM の kernel 共有方式を採�
 | `OSUI_AUTH_TOKEN` | （任意） | 設定すると全 API とコンソールが保護される |
 | `OSUI_DEMO` | `false` | `true` で demo backend を強制 |
 | `OSUI_REQUIRE_GATEWAY` | `false` | `true` で demo フォールバックを禁止 |
+| `OSUI_ALLOW_QUERY_TOKEN` | `false` | `?token=` での認証を許可するか。URL はログ・履歴・Referer に残るため既定で無効 |
 | `OSUI_WORKSPACE` | `default` | 操作対象ワークスペース |
 | `OSUI_SSE_ENABLED` | `true` | SSE エンドポイントの公開可否 |
 | `OSUI_GATEWAY_ENDPOINT` | （SDK 自動検出） | 明示的に gateway を指定する場合に使用 |
@@ -462,9 +486,11 @@ OrbStack は WSL 2 と同じく、軽量 Linux VM の kernel 共有方式を採�
 4. `openshell-uiux-guide.html` — 元の UI/UX ガイド（擬似 API。実 SDK との差分は「ドキュメント訂正ツール」節に整理してあります）
 5. [DEV-MEMO.md](DEV-MEMO.md) — フェーズごとの設計判断と検証記録
 
+開発へ参加する場合は [CONTRIBUTING.md](CONTRIBUTING.md)、変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
+
 ## コントリビューション
 
-コントリビューションは歓迎します。大きな変更を行う前に [Issue](https://github.com/watanabe3tipapa/openshell-plus/issues) を立てて相談してください。一般的な手順:
+コントリビューションは歓迎します。手順・コミット規約・品質ゲートの詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を、変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。大きな変更を行う前に [Issue](https://github.com/watanabe3tipapa/openshell-plus/issues) を立てて相談してください。一般的な手順:
 
 1. リポジトリをフォーク
 2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
@@ -474,7 +500,7 @@ OrbStack は WSL 2 と同じく、軽量 Linux VM の kernel 共有方式を採�
 
 ```bash
 uv sync --all-extras
-uv run pytest        # 149 テスト
+uv run pytest        # 153 テスト（カバレッジ 70% 以上を CI で検証）
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright       # 型チェック（エラー 0）

@@ -17,6 +17,8 @@ const el = {
   rows: document.getElementById("rows"),
   empty: document.getElementById("empty"),
   chipTarget: document.getElementById("chip-target"),
+  demoBanner: document.getElementById("demo-banner"),
+  demoBannerReason: document.getElementById("demo-banner-reason"),
   cmd: document.getElementById("cmd"),
   btnRun: document.getElementById("btn-run"),
   console: document.getElementById("console-body"),
@@ -97,10 +99,16 @@ async function loadConfig() {
     ? "WebSocket でストリーミング受信します。"
     : "WebSocket は無効です。REST にフォールバックします。";
   if (config.backend === "demo") {
+    el.demoBanner.hidden = false;
+    const source = config.backend_source ? `（${config.backend_source}）` : "";
+    el.demoBannerReason.textContent = source;
     write(
       "[info] デモバックエンドで動作中です。OpenShell gateway に接続すると実データが反映されます。",
       "sys"
     );
+  } else {
+    el.demoBanner.hidden = true;
+    el.demoBannerReason.textContent = "";
   }
   return config;
 }
@@ -195,8 +203,9 @@ async function removeSandbox(name) {
 function execEndpoint(name) {
   const scheme = window.location.protocol === "https:" ? "wss" : "ws";
   const url = new URL(`${scheme}://${window.location.host}/api/sandboxes/${encodeURIComponent(name)}/exec`);
-  if (state.token) url.searchParams.set("token", state.token);
-  return url;
+  // トークンは URL ではなく Sec-WebSocket-Protocol で渡す（ログ・履歴・Referer への漏えいを避ける）。
+  const protocols = state.token ? [`bearer.${state.token}`] : [];
+  return { url, protocols };
 }
 
 async function runCommand(event) {
@@ -230,7 +239,8 @@ async function runCommand(event) {
 
 function runOverWebSocket(parts) {
   return new Promise((resolve) => {
-    const socket = new WebSocket(execEndpoint(state.selected));
+    const endpoint = execEndpoint(state.selected);
+    const socket = new WebSocket(endpoint.url, endpoint.protocols);
     state.socket = socket;
     socket.addEventListener("open", () => {
       socket.send(JSON.stringify({ command: parts, timeout_seconds: 60 }));

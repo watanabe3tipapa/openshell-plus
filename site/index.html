@@ -5,17 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenShell Plus — OpenShell をブラウザから操作する UI/UX</title>
 <meta name="description" content="NVIDIA OpenShell のサンドボックス管理・コマンド実行をブラウザから行える FastAPI 製ダッシュボード。ローカル / Cloudflare Tunnel / Vercel / Google Colab に対応。">
+<link rel="canonical" href="https://watanabe3tipapa.github.io/openshell-plus/">
 <meta name="theme-color" content="#ffffff">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenShell Plus">
+<meta property="og:url" content="https://watanabe3tipapa.github.io/openshell-plus/">
 <meta property="og:title" content="OpenShell Plus — OpenShell をブラウザから操作する UI/UX">
-<meta property="og:description" content="サンドボックスの作成・監視・シェル実行をブラウザだけで。">
+<meta property="og:description" content="サンドボックスの作成・監視・シェル実行をブラウザだけで。ローカル / Cloudflare / Vercel / Colab に対応。">
+<meta property="og:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenShell Plus — OpenShell を、ブラウザから。">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenShell Plus — OpenShell をブラウザから操作する UI/UX">
+<meta name="twitter:description" content="サンドボックスの作成・監視・シェル実行をブラウザだけで。ローカル / Cloudflare / Vercel / Colab に対応。">
+<meta name="twitter:image" content="https://watanabe3tipapa.github.io/openshell-plus/og-image.png">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+
+<a class="skip-link" href="#main">本文へスキップ</a>
+
+<nav class="site-nav" aria-label="ページ内ナビゲーション">
+  <div class="nav-inner">
+    <a href="#what-is-openshell">概要</a>
+    <a href="#features">機能</a>
+    <a href="#screenshots">画面</a>
+    <a href="#deploy">デプロイ</a>
+    <a href="#colab">Colab</a>
+    <a href="#architecture">構成図</a>
+    <a href="#quickstart">使い方</a>
+    <a href="#env">環境変数</a>
+    <a href="#corrections">API 差分</a>
+    <a href="#security">セキュリティ</a>
+    <a href="#errors">エラー</a>
+  </div>
+</nav>
 
 <header>
   <div class="wrap">
@@ -38,7 +69,25 @@
   </div>
 </header>
 
-<main class="wrap">
+<main class="wrap" id="main">
+
+<nav class="toc" aria-label="目次">
+  <p class="toc-title">目次</p>
+  <ol>
+    <li><a href="#what-is-openshell">OpenShell とは何か</a></li>
+    <li><a href="#features">何ができるか</a></li>
+    <li><a href="#screenshots">画面（スクリーンショット）</a></li>
+    <li><a href="#deploy">4 つのデプロイ形態</a></li>
+    <li><a href="#colab">Colab で 3 ステップ</a></li>
+    <li><a href="#architecture">構成図</a></li>
+    <li><a href="#quickstart">クイックスタート（ローカル）</a></li>
+    <li><a href="#env">環境変数</a></li>
+    <li><a href="#corrections">ガイドの訂正点</a></li>
+    <li><a href="#security">セキュリティ</a></li>
+    <li><a href="#errors">エラーと対処</a></li>
+    <li><a href="#structure">リポジトリ構成</a></li>
+  </ol>
+</nav>
 
 <section id="what-is-openshell">
   <h2>OpenShell とは何か</h2>
@@ -208,7 +257,7 @@ openshell sandbox create --name demo</code></pre>
   </div>
 </section>
 
-<section>
+<section id="features">
   <h2>何ができるか</h2>
   <p class="lead">
     OpenShell の sandbox は「隔離された実行環境」です。openshell-plus はそのライフサイクルを HTTP API と
@@ -242,7 +291,22 @@ openshell sandbox create --name demo</code></pre>
   </div>
 </section>
 
-<section>
+<section id="screenshots">
+  <h2>画面</h2>
+  <p class="lead">
+    ダッシュボードは一覧・シェルコンソール・作成フォームを 1 画面にまとめています。
+  </p>
+  <div class="screenshots">
+    <figure>
+      <a href="./screenshots/dashboard.png" target="_blank" rel="noopener">
+        <img src="./screenshots/dashboard.png" alt="OpenShell Plus ダッシュボードのスクリーンショット。サンドボックス一覧とシェルコンソールが並ぶ" width="1440" height="900" loading="lazy">
+      </a>
+      <figcaption>ダッシュボード（サンドボックス一覧 + コンソール + 作成フォーム）。中央上部の黄色帯は demo backend 稼働中の DEMO MODE バナーです。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="deploy">
   <h2>4 つのデプロイ形態</h2>
   <p class="lead">同じアプリケーションを、用途に応じて 4 通りの形で公開できます。構成は <code>OSUI_MODE</code> と起動方法だけで切り替わります。</p>
   <div class="table-wrap">
@@ -342,6 +406,12 @@ openshell sandbox create --name demo</code></pre>
       loading="lazy"
       referrerpolicy="no-referrer"></iframe>
   </div>
+  <noscript>
+    <img class="static-diagram"
+      src="./diagrams/openshell-plus-architecture.svg"
+      alt="openshell-plus の静的構成図。ブラウザから FastAPI、backend、OpenShell gateway、supervisor、sandbox へ至る流れと、gateway 到達不能時に demo backend へフォールバックする経路">
+    <p class="muted">この構成図は JavaScript を無効にした環境向けの静的版です。インタラクティブ版は配信中のスクリプトから操作できます。</p>
+  </noscript>
   <div class="flow">
     <div class="node"><b>ブラウザ</b><span>Vanilla JS ダッシュボード</span></div>
     <div class="arrow">→</div>
@@ -381,7 +451,7 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
   </p>
 </section>
 
-<section>
+<section id="env">
   <h2>環境変数</h2>
   <div class="table-wrap">
     <table>
@@ -392,6 +462,7 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
         <tr><td><code>OSUI_GATEWAY_ENDPOINT</code></td><td>（SDK 自動検出）</td><td>明示的に gateway を指定する場合に使用。空なら active cluster を読みます。</td></tr>
         <tr><td><code>OSUI_WORKSPACE</code></td><td><code>default</code></td><td>操作対象ワークスペース。</td></tr>
         <tr><td><code>OSUI_DEMO</code></td><td><code>false</code></td><td><code>true</code> で demo backend を強制。Vercel / Colab 向け。</td></tr>
+        <tr><td><code>OSUI_ALLOW_QUERY_TOKEN</code></td><td><code>false</code></td><td><code>?token=</code> での認証を許可するか。URL はログ・履歴・Referer に残るため既定で無効。</td></tr>
         <tr><td><code>OSUI_REQUIRE_GATEWAY</code></td><td><code>false</code></td><td><code>true</code> で demo フォールバックを禁止し、接続できなければ起動を失敗させます。</td></tr>
         <tr><td><code>OSUI_SSE_ENABLED</code></td><td><code>true</code></td><td>SSE エンドポイントを公開するか。Cloudflare Quick Tunnel では <code>false</code> を推奨。</td></tr>
         <tr><td><code>OSUI_GATEWAY_CA_CERT</code> / <code>OSUI_GATEWAY_CERT</code> / <code>OSUI_GATEWAY_KEY</code></td><td>（任意）</td><td>CA 検証と mTLS クライアント証明書。<code>CERT</code> と <code>KEY</code> は同時指定が必須。</td></tr>
@@ -405,7 +476,7 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
   </div>
 </section>
 
-<section>
+<section id="corrections">
   <h2>ガイドの訂正点（実 API との差分）</h2>
   <p class="lead">ガイドの擬似コードがそのまま実装できなかった箇所を、実 SDK の仕様に合わせて整理しました。コードを書くときの注意点は以下です。</p>
   <ul>
@@ -419,18 +490,40 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
   </ul>
 </section>
 
-<section>
+<section id="security">
   <h2>セキュリティ</h2>
   <ul>
     <li>loopback 以外の bind ではトークンを必須とし、起動時に検証します。</li>
-    <li>token は <code>Authorization: Bearer</code>、<code>Sec-WebSocket-Protocol: bearer.*</code>、<code>?token=</code> の 3 経路を受け付けます（WebSocket はヘッダ制約のため <code>bearer.*</code> を使用）。</li>
+    <li>token は <code>Authorization: Bearer</code> と WebSocket の <code>Sec-WebSocket-Protocol: bearer.*</code> を受け付けます。URL クエリの <code>?token=</code> は既定で拒否します（<code>OSUI_ALLOW_QUERY_TOKEN=true</code> で明示的に許可する場合のみ。URL はアクセスログ・ブラウザ履歴・Referer に残るため非推奨）。</li>
     <li>mTLS と OIDC は gateway の要件に合わせて個別に有効化します。非 loopback gateway では TLS 必須です。</li>
     <li>静的アセットは token なしで配信されます。機密情報は含まれません。</li>
     <li>Colab からの公開トンネル接続はデフォルトで無効（ポリシー違反のため）。</li>
+    <li>demo backend で起動した場合は UI 上部に常時「DEMO MODE」バナーを表示し、実データと区別できます。</li>
   </ul>
 </section>
 
-<section>
+<section id="errors">
+  <h2>エラーと対処</h2>
+  <p class="lead">主要なエラーが返る状況と、UI 上での挙動・対処法です。トースト通知など UI 上のメッセージはコンソールにも出力されます。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>状態</th><th>発生する場面</th><th>UI 上の挙動</th><th>対処</th></tr></thead>
+      <tbody>
+        <tr><td><code>401</code></td><td>トークン未設定・不一致（<code>Authorization</code> / <code>Sec-WebSocket-Protocol</code> / <code>?token=</code>）</td><td>アクセストークン入力パネルを表示</td><td><code>OSUI_AUTH_TOKEN</code> と同じ値を入力</td></tr>
+        <tr><td><code>404</code></td><td>存在しないサンドボックス、または SSE 無効化時の <code>/exec/stream</code></td><td>コンソールに <code>[error] not found</code> を出力</td><td>一覧から正しい名前を選択</td></tr>
+        <tr><td><code>422</code></td><td>未実装フィールド（<code>env</code> 等）や不正なペイロード</td><td>422 の詳細をコンソールに出力</td><td>サポート対象のフィールドのみ送信</td></tr>
+        <tr><td><code>503</code></td><td><code>OSUI_REQUIRE_GATEWAY=true</code> で gateway に到達できない</td><td>起動に失敗（fail-fast）</td><td>gateway の起動・endpoint を確認</td></tr>
+        <tr><td><code>4401</code>（WS）</td><td>WebSocket ハンドシェイク時の token 失敗</td><td>接続切断・再実行可能</td><td>トークンを確認して再接続</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">
+    起動経路の失敗（README / LP の手順どおりでない条件）の詳細は
+    <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/USAGE.md">USAGE.md</a> のトラブルシューティングも参照してください。
+  </p>
+</section>
+
+<section id="structure">
   <h2>リポジトリ構成</h2>
   <div class="table-wrap">
     <table>
@@ -442,6 +535,8 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
         <tr><td><code>deploy/</code></td><td>Cloudflare config、Dockerfile、Colab notebook</td></tr>
         <tr><td><code>policy/</code></td><td>OpenShell policy（version 1）</td></tr>
         <tr><td><code>site/</code></td><td>この LP（GitHub Pages）</td></tr>
+        <tr><td><code>.github/</code></td><td>CI / Pages ワークフロー、Issue・PR テンプレート</td></tr>
+        <tr><td><code>CONTRIBUTING.md</code> / <code>CHANGELOG.md</code></td><td>開発参加ガイド / 変更履歴</td></tr>
       </tbody>
     </table>
   </div>
@@ -455,7 +550,8 @@ export OSUI_GATEWAY_ENDPOINT=https://localhost:17670
       <a data-link="repo" href="https://github.com/watanabe3tipapa/openshell-plus" target="_blank" rel="noopener">GitHub</a> ·
       <a data-link="openshell" href="https://github.com/NVIDIA/OpenShell" target="_blank" rel="noopener">NVIDIA OpenShell</a> ·
       <a data-link="docs" href="https://docs.nvidia.com/openshell/latest/" target="_blank" rel="noopener">ドキュメント</a> ·
-      <a data-link="sdk" href="https://pypi.org/project/openshell/" target="_blank" rel="noopener">PyPI</a>
+      <a data-link="sdk" href="https://pypi.org/project/openshell/" target="_blank" rel="noopener">PyPI</a> ·
+      <a href="https://github.com/watanabe3tipapa/openshell-plus/blob/main/README_en.md" target="_blank" rel="noopener">English</a>
     </p>
     <p>Built with FastAPI · Vanilla JS · OpenShell SDK</p>
   </div>

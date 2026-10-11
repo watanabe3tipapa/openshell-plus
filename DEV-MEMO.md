@@ -340,3 +340,63 @@ Markdown リンク / アンカーは 13 件すべて正常。ノートブック�
   token 位置が 2 番目以降の場合に echo する subprotocol がずれる可能性がある
 - `policy/ui-policy.yaml` のスキーマ適合性が未検証
 - `vercel build` による `api/index.py` と `[tool.vercel] entrypoint` の優先順位が未検証
+
+---
+
+## Phase 7: 検証レポート対応と v0.1.2（2026-10-11）
+
+### 対応したレビュー指摘（openshell-plus-review.html の棚卸し）
+
+| 重要度 | 項目 | 対応 |
+|---|---|---|
+| Critical | コンテンツの途中欠落 | 現行ソースでは既に完備（リスト 7 項目）。修正不要 |
+| Critical | WebSocket `?token=` | `OSUI_ALLOW_QUERY_TOKEN=false` を既定に。UI は `Sec-WebSocket-Protocol: bearer.*` へ移行 |
+| High | LP 情報過多・ナビ不足 | 固定ナビ + 目次（TOC）を追加。ページ分割はせず導線強化で対応 |
+| High | スクリーンショット欠如 | demo 起動 → Chrome headless で撮影。LP / README に掲載 |
+| High | demo フォールバック判別不能 | 常時「DEMO MODE」バナーを UI に追加 |
+| High | 運用基盤未整備 | CONTRIBUTING.md / CHANGELOG.md / Issue・PR テンプレを新設 |
+| High | 英語版不明確 | `README_en.md` 実在・リンク有効を確認。README_en も同期更新 |
+| Medium | SEO / OGP / a11y | `og:image` / `og:url` / `twitter:card` / canonical / apple-touch-icon を追加。スキップリンク・ナビ landmark も追加 |
+| Medium | エラーハンドリング | LP と README に主要エラー（401/404/422/503/WS 4401）と対処を明記 |
+| Medium | テストカバレッジ | CI（`.github/workflows/test.yml`）+ pytest-cov を導入。`fail_under=70`。現状 94% |
+| Medium | 構成図フォールバック | 静的 SVG（`site/diagrams/openshell-plus-architecture.svg`）を noscript で並設 |
+| Low | README Version 空欄 | バッジ（v0.1.2）で対応済み |
+| Low | ファビコン / theme-color | favicon.svg / theme-color は対応済み。apple-touch-icon を追加 |
+| Low | pip 代替インストール | README の「uv を使わない場合」に最小手順を追記 |
+
+### セキュリティ判断（Critical: `?token=`）
+
+- **方針: 既定で無効化（破壊的変更を伴うがセキュア・バイ・デフォルト）**
+- 同梱 UI は従来 `?token=` で WebSocket 認証していたが、ブラウザの
+  `Sec-WebSocket-Protocol` に対応しているため、subprotocol 方式へ移行して
+  URL へのトークン露出を根絶した。
+- 過去の互換用途（SSE を `EventSource` で叩く外部クライアント等）には
+  `OSUI_ALLOW_QUERY_TOKEN=true` の明示オプトインを用意。`auth.py` / `exec.py` の
+  2 箇所で query token を無視する。
+- テストは「既定で 401 / 4401」「オプトイン時 200 / 接続可」の両方向を追加（149 → 153 テスト）。
+
+### 検証
+
+- スクリーンショットは demo backend（`OSUI_DEMO=true`）を起動し、サンドボックスを
+  4 件作成して Chrome headless（`--window-size=1440,900 --force-device-scale-factor=2`）で
+  撮影。`--dump-dom` で行・バナーの描画を確認した。
+- `site/diagrams/openshell-plus-architecture.svg` は `rsvg-convert` で PNG 化して
+  構文が異常ないことを確認。
+- `og-image.png`（1200x630）と `apple-touch-icon.png`（180x180）を生成し、LP の
+  `og:image` / `twitter:image` / `apple-touch-icon` に設定。
+
+### 品質ゲート（v0.1.2 時点）
+
+| ゲート | 結果 |
+|---|---|
+| `uv run pytest --cov=openshell_ui` | 153 passed / 94% |
+| `uv run ruff check .` | All checks passed |
+| `uv run ruff format --check .` | 36 files already formatted |
+| `uv run pyright` | 0 errors, 0 warnings, 0 informations |
+
+### 残課題
+
+- デモ GIF（10〜15 秒の操作動画）は撮影環境の都合上、今回は静止画 1 枚のみ。
+  インタラクション動画は将来の作業に残す。
+- LP のページ分割（Getting Started / Reference / Security）は今回実施せず。
+  固定ナビ + TOC で対応し、必要になったら再検討する。

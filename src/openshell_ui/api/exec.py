@@ -138,7 +138,8 @@ async def stream_command_ws(websocket: WebSocket, name: str) -> None:
         for part in (websocket.headers.get("sec-websocket-protocol") or "").split(",")
         if part.strip()
     ]
-    provided = subprotocol or websocket.query_params.get("token")
+    query_token = websocket.query_params.get("token") if settings.allow_query_token else None
+    provided = subprotocol or query_token
     if not token_matches(settings, provided):
         await websocket.close(code=WS_CLOSE_UNAUTHORIZED)
         return
